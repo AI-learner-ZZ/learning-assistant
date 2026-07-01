@@ -1,0 +1,56 @@
+{
+  "id": "subj-fitness",
+  "name": "健身专业知识",
+  "description": "从运动解剖到训练计划设计，系统掌握科学健身知识",
+  "nodes": [
+    {
+      "name": "运动解剖与生理",
+      "description": "了解身体如何运动",
+      "children": [
+        { "name": "肌肉系统", "description": "主要肌群、起止点、动作功能" },
+        { "name": "能量系统", "description": "磷酸原、糖酵解、有氧系统" }
+      ]
+    },
+    {
+      "name": "力量训练原理",
+      "description": "增肌与增力的科学",
+      "children": [
+        { "name": "渐进超负荷", "description": "训练量、强度、频率的操控" },
+        { "name": "肌肥大机制", "description": "机械张力、代谢压力、肌肉损伤" },
+        { "name": "动作模式", "description": "推、拉、蹲、铰链、负重行走" }
+      ]
+    },
+    {
+      "name": "心肺与体能",
+      "description": "有氧与代谢健康",
+      "children": [
+        { "name": "有氧训练", "description": "LISS、HIIT、最大摄氧量 VO2max" },
+        { "name": "恢复与适应", "description": "超量恢复、疲劳管理、睡眠" }
+      ]
+    },
+    {
+      "name": "训练计划设计",
+      "description": "把原理组织成可执行计划",
+      "children": [
+        { "name": "周期化", "description": "线性、波动、板块周期" },
+        { "name": "分化训练", "description": "全身、上下肢、推拉腿分化" }
+      ]
+    },
+    {
+      "name": "损伤预防与动作质量",
+      "description": "安全地训练",
+      "children": [
+        { "name": "热身与活动度", "description": "动态热身、关节活动度" },
+        { "name": "常见损伤", "description": "下背、肩、膝的风险与规避" }
+      ]
+    },
+    {
+      "name": "营养与补剂",
+      "description": "训练之外的关键",
+      "children": [
+        { "name": "增肌减脂饮食", "description": "热量盈余/缺口、蛋白质摄入" },
+        { "name": "常见补剂", "description": "肌酸、乳清蛋白、咖啡因的证据" }
+      ]
+    }
+  ]
+}

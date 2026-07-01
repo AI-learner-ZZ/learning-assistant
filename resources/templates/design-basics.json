@@ -1,0 +1,55 @@
+{
+  "id": "subj-design-basics",
+  "name": "审美与设计基础",
+  "description": "从视觉原理到设计实践，培养系统的审美判断力",
+  "nodes": [
+    {
+      "name": "视觉感知原理",
+      "description": "理解眼睛与大脑如何处理图像",
+      "children": [
+        { "name": "格式塔原则", "description": "接近、相似、闭合、连续等组织原则" },
+        { "name": "视觉层级", "description": "对比、大小、留白引导视线" }
+      ]
+    },
+    {
+      "name": "色彩",
+      "description": "色彩的语言与运用",
+      "children": [
+        { "name": "色彩理论", "description": "色相、明度、饱和度、色环" },
+        { "name": "配色方案", "description": "互补、邻近、三角配色与情绪表达" }
+      ]
+    },
+    {
+      "name": "排版与文字",
+      "description": "信息的视觉组织",
+      "children": [
+        { "name": "字体", "description": "衬线/无衬线、字重、字体搭配" },
+        { "name": "版式网格", "description": "栅格系统、对齐、间距节奏" }
+      ]
+    },
+    {
+      "name": "构图与平衡",
+      "description": "画面的组织法则",
+      "children": [
+        { "name": "构图法则", "description": "三分法、黄金比例、对称与非对称" },
+        { "name": "空间与留白", "description": "负空间的力量、呼吸感" }
+      ]
+    },
+    {
+      "name": "设计原则与风格",
+      "description": "从原则到风格演变",
+      "children": [
+        { "name": "设计四原则", "description": "对比、重复、对齐、亲密性 (CRAP)" },
+        { "name": "设计风格史", "description": "包豪斯、极简、扁平、新拟物" }
+      ]
+    },
+    {
+      "name": "设计实践",
+      "description": "动手做与评判",
+      "children": [
+        { "name": "设计批判", "description": "如何分析与评价一个设计作品" },
+        { "name": "工具与流程", "description": "从灵感到成稿的工作流" }
+      ]
+    }
+  ]
+}

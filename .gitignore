@@ -1,0 +1,11 @@
+node_modules/
+out/
+dist/
+*.log
+.DS_Store
+.env
+electron_out.txt
+electron_err.txt
+*.local
+dev-docs/
+Capture.PNG

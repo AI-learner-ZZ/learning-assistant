@@ -1,0 +1,293 @@
+{
+  "id": "subj-ai-intro",
+  "name": "人工智能入门",
+  "description": "从零基础到掌握人工智能核心概念与应用，达到大学本科水平",
+  "nodes": [
+    {
+      "id": "node-math-foundations",
+      "name": "数学基础",
+      "description": "支撑机器学习的核心数学工具",
+      "estimatedMinutes": 60,
+      "children": [
+        {
+          "id": "node-linear-algebra",
+          "name": "线性代数",
+          "description": "向量、矩阵运算、特征值分解，神经网络的语言",
+          "estimatedMinutes": 90,
+          "children": [
+            {
+              "id": "node-vectors-matrices",
+              "name": "向量与矩阵",
+              "description": "向量空间、矩阵乘法、转置、逆矩阵",
+              "estimatedMinutes": 45
+            },
+            {
+              "id": "node-eigenvalues",
+              "name": "特征值与特征向量",
+              "description": "理解PCA降维和奇异值分解的基础",
+              "estimatedMinutes": 45
+            }
+          ]
+        },
+        {
+          "id": "node-calculus",
+          "name": "微积分与优化",
+          "description": "导数、梯度、链式法则，反向传播的数学根基",
+          "estimatedMinutes": 90,
+          "children": [
+            {
+              "id": "node-derivatives",
+              "name": "导数与偏导数",
+              "description": "函数变化率，多元函数梯度",
+              "estimatedMinutes": 45
+            },
+            {
+              "id": "node-gradient-descent",
+              "name": "梯度下降",
+              "description": "沿最陡方向下降，学习率的选择，局部最优",
+              "estimatedMinutes": 60
+            }
+          ]
+        },
+        {
+          "id": "node-probability",
+          "name": "概率与统计",
+          "description": "概率分布、贝叶斯定理，机器学习的不确定性语言",
+          "estimatedMinutes": 60,
+          "children": [
+            {
+              "id": "node-prob-basics",
+              "name": "概率基础",
+              "description": "条件概率、独立性、贝叶斯公式",
+              "estimatedMinutes": 45
+            },
+            {
+              "id": "node-distributions",
+              "name": "常用概率分布",
+              "description": "正态分布、伯努利分布、均匀分布",
+              "estimatedMinutes": 30
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "node-python",
+      "name": "Python 编程",
+      "description": "AI 工程师的核心工具语言",
+      "estimatedMinutes": 60,
+      "children": [
+        {
+          "id": "node-python-basics",
+          "name": "Python 语法基础",
+          "description": "变量、控制流、函数、面向对象",
+          "estimatedMinutes": 90
+        },
+        {
+          "id": "node-numpy-pandas",
+          "name": "NumPy & Pandas",
+          "description": "科学计算与数据处理的基础库",
+          "estimatedMinutes": 60
+        },
+        {
+          "id": "node-matplotlib",
+          "name": "数据可视化",
+          "description": "Matplotlib/Seaborn 绘图，理解数据分布",
+          "estimatedMinutes": 45
+        }
+      ]
+    },
+    {
+      "id": "node-ml-core",
+      "name": "机器学习",
+      "description": "从数据中学习模式的算法体系",
+      "estimatedMinutes": 60,
+      "children": [
+        {
+          "id": "node-supervised",
+          "name": "监督学习",
+          "description": "有标签数据的学习，预测与分类",
+          "estimatedMinutes": 60,
+          "children": [
+            {
+              "id": "node-linear-regression",
+              "name": "线性回归",
+              "description": "最简单的预测模型，损失函数与最小二乘法",
+              "estimatedMinutes": 60
+            },
+            {
+              "id": "node-logistic-regression",
+              "name": "逻辑回归",
+              "description": "二分类问题，sigmoid函数，交叉熵损失",
+              "estimatedMinutes": 60
+            },
+            {
+              "id": "node-decision-trees",
+              "name": "决策树与随机森林",
+              "description": "信息增益，集成学习思想",
+              "estimatedMinutes": 60
+            },
+            {
+              "id": "node-svm",
+              "name": "支持向量机",
+              "description": "最大间隔超平面，核函数技巧",
+              "estimatedMinutes": 60
+            }
+          ]
+        },
+        {
+          "id": "node-unsupervised",
+          "name": "无监督学习",
+          "description": "无标签数据的模式发现",
+          "estimatedMinutes": 45,
+          "children": [
+            {
+              "id": "node-kmeans",
+              "name": "K-Means 聚类",
+              "description": "将数据分组，簇中心的迭代更新",
+              "estimatedMinutes": 45
+            },
+            {
+              "id": "node-pca",
+              "name": "主成分分析 (PCA)",
+              "description": "降维，找到数据最大方差方向",
+              "estimatedMinutes": 45
+            }
+          ]
+        },
+        {
+          "id": "node-model-evaluation",
+          "name": "模型评估与调优",
+          "description": "防止过拟合，正确评估模型",
+          "estimatedMinutes": 60,
+          "children": [
+            {
+              "id": "node-overfitting",
+              "name": "过拟合与正则化",
+              "description": "训练集/验证集/测试集，L1/L2正则化",
+              "estimatedMinutes": 60
+            },
+            {
+              "id": "node-metrics",
+              "name": "评估指标",
+              "description": "准确率、精确率、召回率、F1、ROC-AUC",
+              "estimatedMinutes": 45
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "node-deep-learning",
+      "name": "深度学习",
+      "description": "基于神经网络的强大学习框架",
+      "estimatedMinutes": 60,
+      "children": [
+        {
+          "id": "node-nn-basics",
+          "name": "神经网络基础",
+          "description": "感知机、多层网络、激活函数",
+          "estimatedMinutes": 90,
+          "children": [
+            {
+              "id": "node-perceptron",
+              "name": "感知机与神经元",
+              "description": "生物神经元模拟，加权求和+激活",
+              "estimatedMinutes": 45
+            },
+            {
+              "id": "node-activation-functions",
+              "name": "激活函数",
+              "description": "ReLU、Sigmoid、Tanh的特性与选择",
+              "estimatedMinutes": 45
+            },
+            {
+              "id": "node-backprop",
+              "name": "反向传播",
+              "description": "链式法则计算梯度，权重更新",
+              "estimatedMinutes": 90
+            }
+          ]
+        },
+        {
+          "id": "node-cnn",
+          "name": "卷积神经网络 (CNN)",
+          "description": "图像识别的核心架构，局部感受野与权重共享",
+          "estimatedMinutes": 90
+        },
+        {
+          "id": "node-rnn-transformer",
+          "name": "序列模型与 Transformer",
+          "description": "从RNN到注意力机制，现代大模型的基础",
+          "estimatedMinutes": 120,
+          "children": [
+            {
+              "id": "node-rnn",
+              "name": "RNN 与 LSTM",
+              "description": "处理序列数据，梯度消失问题",
+              "estimatedMinutes": 60
+            },
+            {
+              "id": "node-attention",
+              "name": "注意力机制",
+              "description": "自注意力，Query/Key/Value，多头注意力",
+              "estimatedMinutes": 90
+            },
+            {
+              "id": "node-transformer",
+              "name": "Transformer 架构",
+              "description": "编码器-解码器，位置编码，GPT与BERT的根基",
+              "estimatedMinutes": 90
+            }
+          ]
+        },
+        {
+          "id": "node-dl-frameworks",
+          "name": "深度学习框架",
+          "description": "PyTorch实践：张量操作、自动求导、模型训练",
+          "estimatedMinutes": 90
+        }
+      ]
+    },
+    {
+      "id": "node-nlp",
+      "name": "自然语言处理 (NLP)",
+      "description": "让机器理解和生成人类语言",
+      "estimatedMinutes": 60,
+      "children": [
+        {
+          "id": "node-word-embeddings",
+          "name": "词向量与文本表示",
+          "description": "Word2Vec、GloVe，词义的向量化",
+          "estimatedMinutes": 60
+        },
+        {
+          "id": "node-llm",
+          "name": "大语言模型 (LLM)",
+          "description": "GPT系列、提示工程、微调技术",
+          "estimatedMinutes": 120
+        }
+      ]
+    },
+    {
+      "id": "node-engineering",
+      "name": "工程部署",
+      "description": "将模型从实验室带到生产环境",
+      "estimatedMinutes": 60,
+      "children": [
+        {
+          "id": "node-model-serving",
+          "name": "模型推理与服务化",
+          "description": "FastAPI部署模型，REST接口设计",
+          "estimatedMinutes": 60
+        },
+        {
+          "id": "node-data-pipeline",
+          "name": "数据工程基础",
+          "description": "数据收集、清洗、特征工程流水线",
+          "estimatedMinutes": 60
+        }
+      ]
+    }
+  ]
+}

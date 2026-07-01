@@ -1,0 +1,56 @@
+{
+  "id": "subj-nutrition",
+  "name": "营养学入门",
+  "description": "从能量代谢到生命周期营养，系统掌握营养学核心，达到本科水平",
+  "nodes": [
+    {
+      "name": "能量代谢基础",
+      "description": "理解身体如何获取与消耗能量",
+      "children": [
+        { "name": "热量与卡路里", "description": "能量单位、基础代谢率 BMR、总消耗 TDEE" },
+        { "name": "能量平衡", "description": "摄入与消耗的平衡，增重/减重原理" }
+      ]
+    },
+    {
+      "name": "宏量营养素",
+      "description": "三大供能营养素",
+      "children": [
+        { "name": "碳水化合物", "description": "升糖指数、纤维、糖的代谢" },
+        { "name": "蛋白质", "description": "氨基酸、蛋白质质量、每日需求" },
+        { "name": "脂肪", "description": "饱和/不饱和脂肪酸、Omega-3、胆固醇" }
+      ]
+    },
+    {
+      "name": "微量营养素",
+      "description": "维生素与矿物质",
+      "children": [
+        { "name": "维生素", "description": "水溶性与脂溶性维生素的功能与来源" },
+        { "name": "矿物质", "description": "钙、铁、锌、镁等的作用与缺乏症" }
+      ]
+    },
+    {
+      "name": "消化与吸收",
+      "description": "营养素如何进入人体",
+      "children": [
+        { "name": "消化系统", "description": "从口腔到肠道的消化过程" },
+        { "name": "肠道菌群", "description": "微生物组对营养与健康的影响" }
+      ]
+    },
+    {
+      "name": "生命周期营养",
+      "description": "不同人群的营养需求",
+      "children": [
+        { "name": "运动营养", "description": "训练前后补给、碳水循环、补剂" },
+        { "name": "特殊人群", "description": "孕期、儿童、老年人的营养要点" }
+      ]
+    },
+    {
+      "name": "膳食规划与评估",
+      "description": "把知识落地到日常饮食",
+      "children": [
+        { "name": "膳食指南", "description": "膳食宝塔、营养标签解读" },
+        { "name": "饮食模式", "description": "地中海饮食、生酮、低碳等模式分析" }
+      ]
+    }
+  ]
+}

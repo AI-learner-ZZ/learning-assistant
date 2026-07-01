@@ -1,0 +1,56 @@
+{
+  "id": "subj-cognitive-biases",
+  "name": "心理学认知偏差",
+  "description": "系统认识人类思维的系统性偏差，提升理性决策能力",
+  "nodes": [
+    {
+      "name": "双系统思维",
+      "description": "理解快与慢两种思考模式",
+      "children": [
+        { "name": "系统1与系统2", "description": "直觉式与分析式思维的分工" },
+        { "name": "认知放松与启发法", "description": "为什么大脑偏爱省力的捷径" }
+      ]
+    },
+    {
+      "name": "判断启发式",
+      "description": "常见的思维捷径及其陷阱",
+      "children": [
+        { "name": "代表性启发", "description": "用相似性替代概率判断" },
+        { "name": "可得性启发", "description": "用易回忆程度估计频率" },
+        { "name": "锚定效应", "description": "初始信息对判断的牵引" }
+      ]
+    },
+    {
+      "name": "信念与确认偏差",
+      "description": "我们如何维护既有信念",
+      "children": [
+        { "name": "确认偏差", "description": "只关注支持自己观点的证据" },
+        { "name": "后见之明偏差", "description": "事后觉得早就知道会这样" }
+      ]
+    },
+    {
+      "name": "前景理论与决策",
+      "description": "面对风险与损失的非理性",
+      "children": [
+        { "name": "损失厌恶", "description": "损失的痛苦大于等量收益的快乐" },
+        { "name": "框架效应", "description": "同一问题不同表述导致不同选择" }
+      ]
+    },
+    {
+      "name": "社会与自我偏差",
+      "description": "关于他人和自己的偏差",
+      "children": [
+        { "name": "基本归因错误", "description": "高估性格、低估情境的影响" },
+        { "name": "过度自信", "description": "高估自己的知识与能力" }
+      ]
+    },
+    {
+      "name": "去偏与理性实践",
+      "description": "如何对抗偏差",
+      "children": [
+        { "name": "去偏策略", "description": "预先承诺、反向思考、外部视角" },
+        { "name": "概率思维", "description": "用贝叶斯方式更新信念" }
+      ]
+    }
+  ]
+}
