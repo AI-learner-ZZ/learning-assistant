@@ -6,6 +6,10 @@ An offline-first, conversation-driven desktop companion for **deep, systematic s
 
 Built with Electron + React + TypeScript. Bring your own OpenAI-compatible API key (OpenAI, DeepSeek, or any custom base URL).
 
+### 🔴 [Live UI demo →](https://your-github-username.github.io/learning-assistant/)
+
+Click around the real interface right in your browser — no install, no key. The demo runs the actual UI with **sample data and scripted AI replies** (real AI, file parsing, and local persistence are desktop-only). To use it for real, [download the app](#build-a-distributable) and plug in your own model.
+
 ---
 
 ## Getting Started
@@ -31,6 +35,17 @@ Then you land on the **knowledge seed** screen: type a field ("Artificial Intell
 npm run build      # compile main + preload + renderer
 npm run package    # produce an installer in dist/ (Windows .exe / macOS .dmg / Linux AppImage+deb)
 ```
+
+### Web showcase (GitHub Pages)
+
+The same React UI can be built as a static site that runs in any browser with a mocked backend (`demo/mockApi.ts` supplies sample data and scripted AI streaming):
+
+```bash
+npm run demo:dev     # preview the browser demo locally
+npm run demo:build   # output a static site to demo-dist/
+```
+
+[.github/workflows/demo.yml](.github/workflows/demo.yml) auto-deploys it to GitHub Pages on push to `main` (enable Pages → "GitHub Actions" in repo settings, and set your repo's `owner` in the demo link above).
 
 ---
 

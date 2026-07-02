@@ -8,6 +8,8 @@
     "start": "node scripts/launch.mjs preview",
     "build": "electron-vite build",
     "package": "npm run build && electron-builder",
+    "demo:dev": "vite --config vite.demo.config.ts",
+    "demo:build": "vite build --config vite.demo.config.ts",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json",
     "typecheck": "npm run typecheck:node && npm run typecheck:web"

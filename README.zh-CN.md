@@ -6,6 +6,10 @@
 
 技术栈：Electron + React + TypeScript。自带 OpenAI 兼容的 API Key（OpenAI、DeepSeek，或任意自定义 base URL）。
 
+### 🔴 [在线 UI 演示 →](https://your-github-username.github.io/learning-assistant/)
+
+无需安装、无需 Key，直接在浏览器里点击体验真实界面。演示用的是**示例数据 + 脚本化的 AI 回复**（真实 AI 对话、文件解析、本地持久化仅桌面版可用）。要真正使用，请[下载桌面应用](#打包安装程序)并填入你自己的模型。
+
 ---
 
 ## 快速开始

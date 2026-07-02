@@ -8,4 +8,7 @@ electron_out.txt
 electron_err.txt
 *.local
 dev-docs/
+demo-dist/
 Capture.PNG
+demo-shot.png
+./claude
