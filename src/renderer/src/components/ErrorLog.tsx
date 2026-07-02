@@ -5,6 +5,7 @@ import { Badge } from './ui/badge'
 import { ScrollArea } from './ui/scroll-area'
 import { formatDate } from '@/lib/utils'
 import { useTreeStore } from '@/stores/useTreeStore'
+import { useT } from '@/lib/i18n'
 
 interface ErrorEntry {
   id: string
@@ -24,11 +25,22 @@ const ERROR_TYPE_COLORS: Record<string, string> = {
   'ApplicationError': 'bg-orange-100 text-orange-800'
 }
 
+const ERROR_TYPE_EN: Record<string, string> = {
+  '概念混淆': 'Concept confusion',
+  '计算错误': 'Calculation error',
+  '应用偏差': 'Application error',
+  '无': 'None',
+  'ConceptConfusion': 'Concept confusion',
+  'CalculationError': 'Calculation error',
+  'ApplicationError': 'Application error'
+}
+
 interface ErrorLogProps {
   onReviewNode: (nodeId: string) => void
 }
 
 export function ErrorLog({ onReviewNode }: ErrorLogProps): JSX.Element {
+  const { t, isZh } = useT()
   const [errors, setErrors] = useState<ErrorEntry[]>([])
   const { selectNode } = useTreeStore()
 
@@ -51,7 +63,7 @@ export function ErrorLog({ onReviewNode }: ErrorLogProps): JSX.Element {
       <div className="flex items-center justify-between mb-3">
         <h3 className="font-medium text-sm flex items-center gap-1.5">
           <AlertTriangle className="h-4 w-4 text-yellow-500" />
-          错误记录
+          {t('错误记录', 'Error Log')}
         </h3>
         <Button size="sm" variant="ghost" onClick={loadErrors}>
           <RefreshCw className="h-3 w-3" />
@@ -61,8 +73,8 @@ export function ErrorLog({ onReviewNode }: ErrorLogProps): JSX.Element {
       {errors.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground text-sm">
           <div className="text-3xl mb-2">✅</div>
-          <p>暂无错误记录</p>
-          <p className="text-xs mt-1">完成追问后，AI 会自动记录你的错误</p>
+          <p>{t('暂无错误记录', 'No errors logged yet')}</p>
+          <p className="text-xs mt-1">{t('完成追问后，AI 会自动记录你的错误', 'The AI logs your mistakes automatically after each Q&A')}</p>
         </div>
       ) : (
         <ScrollArea className="max-h-96">
@@ -78,7 +90,7 @@ export function ErrorLog({ onReviewNode }: ErrorLogProps): JSX.Element {
                       <Badge
                         className={`text-xs border-0 ${ERROR_TYPE_COLORS[err.error_type] || 'bg-muted text-muted-foreground'}`}
                       >
-                        {err.error_type}
+                        {isZh ? err.error_type : (ERROR_TYPE_EN[err.error_type] || err.error_type)}
                       </Badge>
                     </div>
                     {err.error_content && (
@@ -87,7 +99,7 @@ export function ErrorLog({ onReviewNode }: ErrorLogProps): JSX.Element {
                     <p className="text-xs text-muted-foreground/60 mt-1">{formatDate(err.created_at)}</p>
                   </div>
                   <Button size="sm" variant="outline" className="shrink-0 text-xs" onClick={() => handleReview(err.node_id)}>
-                    复习
+                    {t('复习', 'Review')}
                   </Button>
                 </div>
               </div>

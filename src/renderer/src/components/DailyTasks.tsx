@@ -4,13 +4,13 @@ import { Button } from './ui/button'
 import { Badge } from './ui/badge'
 import { useDailyStore, DailyTask } from '@/stores/useDailyStore'
 import { useTreeStore } from '@/stores/useTreeStore'
-import { useSettingsStore } from '@/stores/useSettingsStore'
+import { useT } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 
 const TASK_CONFIG = {
-  core: { icon: BookOpen, label: '核心新学', color: 'text-blue-500' },
-  review: { icon: RefreshCw, label: '快速复习', color: 'text-green-500' },
-  explore: { icon: Compass, label: '拓展阅读', color: 'text-purple-500' }
+  core: { icon: BookOpen, label: ['核心新学', 'Core'] as const, color: 'text-blue-500' },
+  review: { icon: RefreshCw, label: ['快速复习', 'Review'] as const, color: 'text-green-500' },
+  explore: { icon: Compass, label: ['拓展阅读', 'Explore'] as const, color: 'text-purple-500' }
 }
 
 interface TaskCardProps {
@@ -21,6 +21,7 @@ interface TaskCardProps {
 }
 
 function TaskCard({ task, onStart, onComplete, onFeedback }: TaskCardProps): JSX.Element {
+  const { t } = useT()
   const config = TASK_CONFIG[task.task_type]
   const Icon = config.icon
   const isDone = task.status === 'done'
@@ -44,11 +45,11 @@ function TaskCard({ task, onStart, onComplete, onFeedback }: TaskCardProps): JSX
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <Badge variant="outline" className={cn('text-xs', config.color)}>
-                {config.label}
+                {t(config.label[0], config.label[1])}
               </Badge>
               <span className="text-xs text-muted-foreground flex items-center gap-1">
                 <Clock className="h-3 w-3" />
-                {task.estimated_minutes}分钟
+                {task.estimated_minutes}{t('分钟', 'min')}
               </span>
             </div>
             <p className="font-medium text-sm mt-1 line-clamp-1">{task.title}</p>
@@ -61,35 +62,35 @@ function TaskCard({ task, onStart, onComplete, onFeedback }: TaskCardProps): JSX
           <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0 mt-0.5" />
         ) : (
           <div className="flex gap-1.5 shrink-0">
-            <Button size="sm" variant="outline" onClick={() => onComplete(task.id)}>完成</Button>
-            <Button size="sm" onClick={() => onStart(task)}>开始</Button>
+            <Button size="sm" variant="outline" onClick={() => onComplete(task.id)}>{t('完成', 'Done')}</Button>
+            <Button size="sm" onClick={() => onStart(task)}>{t('开始', 'Start')}</Button>
           </div>
         )}
       </div>
 
       {!isDone && (
         <div className="flex items-center gap-1.5 mt-2.5 pt-2.5 border-t">
-          <span className="text-xs text-muted-foreground mr-1">反馈：</span>
+          <span className="text-xs text-muted-foreground mr-1">{t('反馈：', 'Feedback:')}</span>
           <button
             className={cn('flex items-center gap-1 text-xs px-2 py-1 rounded-md transition-colors',
               sentFeedback === 'too_hard' ? 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300' : 'hover:bg-accent text-muted-foreground')}
             onClick={() => handleFeedback('too_hard')}
           >
-            <ThumbsDown className="h-3 w-3" /> 太难
+            <ThumbsDown className="h-3 w-3" /> {t('太难', 'Too hard')}
           </button>
           <button
             className={cn('flex items-center gap-1 text-xs px-2 py-1 rounded-md transition-colors',
               sentFeedback === 'too_easy' ? 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300' : 'hover:bg-accent text-muted-foreground')}
             onClick={() => handleFeedback('too_easy')}
           >
-            <ThumbsUp className="h-3 w-3" /> 太简单
+            <ThumbsUp className="h-3 w-3" /> {t('太简单', 'Too easy')}
           </button>
           <button
             className={cn('flex items-center gap-1 text-xs px-2 py-1 rounded-md transition-colors',
               sentFeedback === 'not_interested' ? 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300' : 'hover:bg-accent text-muted-foreground')}
             onClick={() => handleFeedback('not_interested')}
           >
-            <MehIcon className="h-3 w-3" /> 没兴趣
+            <MehIcon className="h-3 w-3" /> {t('没兴趣', 'Not interested')}
           </button>
         </div>
       )}
@@ -104,9 +105,7 @@ interface DailyTasksProps {
 export function DailyTasks({ onTaskStart }: DailyTasksProps): JSX.Element {
   const { tasks, loading, loadTasks, generateTasks, updateTask, sendFeedback } = useDailyStore()
   const { nodes, selectedNodeId } = useTreeStore()
-  const { settings } = useSettingsStore()
-
-  const isZh = settings.language === 'zh'
+  const { t } = useT()
 
   useEffect(() => {
     loadTasks()
@@ -143,21 +142,21 @@ export function DailyTasks({ onTaskStart }: DailyTasksProps): JSX.Element {
     <div className="p-4 space-y-3">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="font-medium text-sm">{isZh ? '今日学习' : 'Today\'s Tasks'}</h3>
+          <h3 className="font-medium text-sm">{t('今日学习', "Today's Tasks")}</h3>
           {tasks.length > 0 && (
-            <p className="text-xs text-muted-foreground">{completedCount}/{tasks.length} 已完成</p>
+            <p className="text-xs text-muted-foreground">{completedCount}/{tasks.length} {t('已完成', 'done')}</p>
           )}
         </div>
         <Button size="sm" variant="outline" onClick={handleGenerate} disabled={loading}>
           {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
-          <span className="ml-1">{tasks.length ? '刷新' : '生成课表'}</span>
+          <span className="ml-1">{tasks.length ? t('刷新', 'Refresh') : t('生成课表', 'Generate')}</span>
         </Button>
       </div>
 
       {tasks.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground text-sm">
           <div className="text-3xl mb-2">📋</div>
-          <p>{isZh ? '点击"生成课表"获取今日学习计划' : 'Click "Generate" to get today\'s study plan'}</p>
+          <p>{t('点击"生成课表"获取今日学习计划', 'Click "Generate" to get today\'s study plan')}</p>
         </div>
       ) : (
         <div className="space-y-2">

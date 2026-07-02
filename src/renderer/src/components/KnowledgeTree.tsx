@@ -15,6 +15,7 @@ import ReactFlow, {
 import 'reactflow/dist/style.css'
 import { useTreeStore, TreeNode } from '@/stores/useTreeStore'
 import { cn } from '@/lib/utils'
+import { useT } from '@/lib/i18n'
 import { SkipForward, HelpCircle, Pencil, Plus, Upload, Download, Trash2, X } from 'lucide-react'
 import { Button } from './ui/button'
 
@@ -32,6 +33,7 @@ interface NodeData {
 }
 
 function KnowledgeNode({ data, selected }: NodeProps<NodeData>): JSX.Element {
+  const { t } = useT()
   const statusConfig = {
     unlocked: 'border-border bg-card text-foreground',
     learning: 'border-primary/70 bg-primary/5 text-primary animate-breathing',
@@ -77,14 +79,14 @@ function KnowledgeNode({ data, selected }: NodeProps<NodeData>): JSX.Element {
           <>
             <button
               className="p-0.5 hover:text-green-500 transition-colors"
-              title="新增子节点"
+              title={t('新增子节点', 'Add child')}
               onClick={e => { e.stopPropagation(); data.onAddChild?.(data.nodeId) }}
             >
               <Plus className="h-3 w-3" />
             </button>
             <button
               className="p-0.5 hover:text-red-500 transition-colors"
-              title="删除此节点"
+              title={t('删除此节点', 'Delete node')}
               onClick={e => { e.stopPropagation(); data.onDelete?.(data.nodeId) }}
             >
               <Trash2 className="h-3 w-3" />
@@ -94,14 +96,14 @@ function KnowledgeNode({ data, selected }: NodeProps<NodeData>): JSX.Element {
           <>
             <button
               className="p-0.5 hover:text-yellow-500 transition-colors"
-              title="跳过此节点"
+              title={t('跳过此节点', 'Skip node')}
               onClick={e => { e.stopPropagation(); data.onSkip(data.nodeId) }}
             >
               <SkipForward className="h-3 w-3" />
             </button>
             <button
               className="p-0.5 hover:text-blue-500 transition-colors"
-              title="质疑此节点必要性"
+              title={t('质疑此节点必要性', 'Challenge necessity')}
               onClick={e => { e.stopPropagation(); data.onQuestion(data.nodeId, data.label) }}
             >
               <HelpCircle className="h-3 w-3" />
@@ -177,6 +179,7 @@ interface KnowledgeTreeProps {
 }
 
 export function KnowledgeTree({ onNodeSelect, onExplainNode, onClearSelection }: KnowledgeTreeProps): JSX.Element {
+  const { t } = useT()
   const { nodes, selectedNodeId, currentSubjectId, selectNode, updateNodeStatus, loadNodes, loadSubjects } = useTreeStore()
   const [rfNodes, setRfNodes, onNodesChange] = useNodesState([])
   const [rfEdges, setRfEdges, onEdgesChange] = useEdgesState([])
@@ -209,7 +212,7 @@ export function KnowledgeTree({ onNodeSelect, onExplainNode, onClearSelection }:
   const handleDelete = useCallback(async (id: string) => {
     const hasChildren = nodes.some(n => n.parent_id === id)
     const cascade = hasChildren
-      ? confirm('该节点有子节点。点击"确定"级联删除所有子节点，点击"取消"仅删除该节点（子节点上移）。')
+      ? confirm(t('该节点有子节点。点击"确定"级联删除所有子节点，点击"取消"仅删除该节点（子节点上移）。', 'This node has children. Click OK to cascade-delete all children, or Cancel to delete only this node (children move up).'))
       : false
     await window.api.tree.deleteNode(id, cascade)
     if (currentSubjectId) await loadNodes(currentSubjectId)
@@ -220,7 +223,7 @@ export function KnowledgeTree({ onNodeSelect, onExplainNode, onClearSelection }:
 
     const result = await window.api.tree.reparent(conn.target, conn.source, currentSubjectId) as { success: boolean; cycleEdges?: unknown[] }
     if (!result.success) {
-      setCycleError('检测到循环依赖，已阻止该连接。')
+      setCycleError(t('检测到循环依赖，已阻止该连接。', 'Cycle detected — connection blocked.'))
       setTimeout(() => setCycleError(null), 3000)
       return
     }
@@ -282,8 +285,8 @@ export function KnowledgeTree({ onNodeSelect, onExplainNode, onClearSelection }:
       <div className="h-full flex items-center justify-center text-muted-foreground text-sm p-8 text-center">
         <div>
           <div className="text-4xl mb-3">🌱</div>
-          <p>暂无知识树节点</p>
-          <p className="text-xs mt-1">正在加载学科模板...</p>
+          <p>{t('暂无知识树节点', 'No knowledge nodes yet')}</p>
+          <p className="text-xs mt-1">{t('正在加载学科模板...', 'Loading subject template...')}</p>
         </div>
       </div>
     )
@@ -297,19 +300,19 @@ export function KnowledgeTree({ onNodeSelect, onExplainNode, onClearSelection }:
           variant={editMode ? 'default' : 'ghost'}
           className="h-7 gap-1 text-xs px-2"
           onClick={() => setEditMode(!editMode)}
-          title="切换编辑模式（拖拽连线改变父子关系）"
+          title={t('切换编辑模式（拖拽连线改变父子关系）', 'Toggle edit mode (drag to re-parent)')}
         >
-          <Pencil className="h-3.5 w-3.5" /> {editMode ? '退出编辑' : '编辑'}
+          <Pencil className="h-3.5 w-3.5" /> {editMode ? t('退出编辑', 'Exit') : t('编辑', 'Edit')}
         </Button>
         {editMode && (
-          <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs px-2" onClick={() => setAddingChildOf('root')} title="新增根节点">
-            <Plus className="h-3.5 w-3.5" /> 节点
+          <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs px-2" onClick={() => setAddingChildOf('root')} title={t('新增根节点', 'Add root node')}>
+            <Plus className="h-3.5 w-3.5" /> {t('节点', 'Node')}
           </Button>
         )}
-        <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={handleExport} title="导出为 JSON">
+        <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={handleExport} title={t('导出为 JSON', 'Export as JSON')}>
           <Download className="h-3.5 w-3.5" />
         </Button>
-        <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={handleImport} title="从 JSON 导入新学科">
+        <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={handleImport} title={t('从 JSON 导入新学科', 'Import subject from JSON')}>
           <Upload className="h-3.5 w-3.5" />
         </Button>
       </div>
@@ -324,25 +327,25 @@ export function KnowledgeTree({ onNodeSelect, onExplainNode, onClearSelection }:
         <div className="absolute top-12 left-2 z-10 bg-background border rounded-lg p-3 shadow-lg w-64">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-medium">
-              {addingChildOf === 'root' ? '新增根节点' : '新增子节点'}
+              {addingChildOf === 'root' ? t('新增根节点', 'Add root node') : t('新增子节点', 'Add child node')}
             </span>
             <button onClick={() => { setAddingChildOf(null); setNewNodeName('') }}><X className="h-3.5 w-3.5" /></button>
           </div>
           <input
             autoFocus
             className="w-full text-sm border rounded-md px-2 py-1 bg-background mb-2"
-            placeholder="节点名称"
+            placeholder={t('节点名称', 'Node name')}
             value={newNodeName}
             onChange={e => setNewNodeName(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') handleAddNode() }}
           />
-          <Button size="sm" className="w-full h-7 text-xs" disabled={!newNodeName.trim()} onClick={handleAddNode}>添加</Button>
+          <Button size="sm" className="w-full h-7 text-xs" disabled={!newNodeName.trim()} onClick={handleAddNode}>{t('添加', 'Add')}</Button>
         </div>
       )}
 
       {editMode && (
         <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 bg-primary/10 text-primary text-xs px-3 py-1.5 rounded-full">
-          编辑模式：拖动节点底部圆点连到另一节点顶部，即可设置父子关系
+          {t('编辑模式：拖动节点右侧圆点连到另一节点左侧，即可设置父子关系', 'Edit mode: drag from a node\'s right dot to another node\'s left to set parent/child')}
         </div>
       )}
 

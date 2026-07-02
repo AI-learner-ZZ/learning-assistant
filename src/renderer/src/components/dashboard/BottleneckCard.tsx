@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { LifeBuoy, Loader2, FileText, Copy, Download, Check } from 'lucide-react'
 import { Button } from '../ui/button'
+import { useT } from '@/lib/i18n'
 
 interface Bottleneck {
   nodeId: string
@@ -11,6 +12,7 @@ interface Bottleneck {
 }
 
 export function BottleneckCard({ bottlenecks }: { bottlenecks: Bottleneck[] }): JSX.Element {
+  const { t } = useT()
   const [report, setReport] = useState<string | null>(null)
   const [reportNode, setReportNode] = useState<string>('')
   const [loading, setLoading] = useState(false)
@@ -40,19 +42,19 @@ export function BottleneckCard({ bottlenecks }: { bottlenecks: Bottleneck[] }): 
     <div className="border-2 border-rose-200 dark:border-rose-900 rounded-xl p-4 bg-rose-50/40 dark:bg-rose-950/20">
       <h4 className="text-sm font-medium mb-2 flex items-center gap-1.5 text-rose-700 dark:text-rose-300">
         <LifeBuoy className="h-4 w-4" />
-        卡点提醒（建议寻求外部帮助）
+        {t('卡点提醒（建议寻求外部帮助）', 'Bottleneck Alert (consider outside help)')}
       </h4>
-      <p className="text-xs text-muted-foreground mb-3">以下节点你已多次受阻、跨度超过一周，AI 可生成一份"卡点报告"方便你请教他人。</p>
+      <p className="text-xs text-muted-foreground mb-3">{t('以下节点你已多次受阻、跨度超过一周，AI 可生成一份"卡点报告"方便你请教他人。', 'You have been stuck on these nodes repeatedly for over a week. The AI can produce a "stuck report" to share when asking for help.')}</p>
       <div className="space-y-2">
         {bottlenecks.map(b => (
           <div key={b.nodeId} className="flex items-center justify-between gap-2 border rounded-lg p-2 bg-card">
             <div className="min-w-0">
               <p className="text-sm font-medium truncate">{b.nodeName}</p>
-              <p className="text-xs text-muted-foreground">失败 {b.errorCount} 次 · 跨度 {b.spanDays} 天</p>
+              <p className="text-xs text-muted-foreground">{t(`失败 ${b.errorCount} 次 · 跨度 ${b.spanDays} 天`, `${b.errorCount} failures · ${b.spanDays}d span`)}</p>
             </div>
             <Button size="sm" variant="outline" className="shrink-0 gap-1 text-xs h-7" disabled={loading} onClick={() => genReport(b)}>
               {loading && reportNode === b.nodeName ? <Loader2 className="h-3 w-3 animate-spin" /> : <FileText className="h-3 w-3" />}
-              生成报告
+              {t('生成报告', 'Report')}
             </Button>
           </div>
         ))}
@@ -61,13 +63,13 @@ export function BottleneckCard({ bottlenecks }: { bottlenecks: Bottleneck[] }): 
       {report && (
         <div className="mt-3 border rounded-lg p-3 bg-card">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium">卡点报告 — {reportNode}</span>
+            <span className="text-xs font-medium">{t('卡点报告', 'Stuck report')} — {reportNode}</span>
             <div className="flex gap-1">
               <Button size="sm" variant="ghost" className="h-6 gap-1 text-xs" onClick={copy}>
-                {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}复制
+                {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}{t('复制', 'Copy')}
               </Button>
               <Button size="sm" variant="ghost" className="h-6 gap-1 text-xs" onClick={() => window.api.bottleneck.export(report)}>
-                <Download className="h-3 w-3" />导出
+                <Download className="h-3 w-3" />{t('导出', 'Export')}
               </Button>
             </div>
           </div>

@@ -14,15 +14,15 @@ import { SvgDiagram } from './SvgDiagram'
 import { useChatStore, Message, SearchSource } from '@/stores/useChatStore'
 import { useTreeStore } from '@/stores/useTreeStore'
 import { useSettingsStore } from '@/stores/useSettingsStore'
+import { useT } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 
-function renderContent(content: string): string {
-
+function renderContent(content: string, isZh: boolean): string {
   return content
     .replace(/\[SCORE\][^\n]*/g, '')
     .replace(/\[ERROR_TYPE\][^\n]*/g, '')
-    .replace(/\[SUMMARY\]/g, '📋 **本节学习总结**\n\n')
-    .replace(/\[QUESTION\]/g, '🤔 **追问：**')
+    .replace(/\[SUMMARY\]/g, isZh ? '📋 **本节学习总结**\n\n' : '📋 **Session Summary**\n\n')
+    .replace(/\[QUESTION\]/g, isZh ? '🤔 **追问：**' : '🤔 **Question:**')
     .trim()
 }
 
@@ -50,19 +50,20 @@ function Markdown({ children }: { children: string }): JSX.Element {
 }
 
 function SearchSourceCard({ query, sources }: { query: string; sources: SearchSource[] }): JSX.Element {
+  const { t } = useT()
   const open = (url: string): void => { window.api.data.openExternal(url) }
   return (
     <div className="border rounded-lg p-3 bg-blue-50/50 dark:bg-blue-950/30 mb-2 mt-1">
       <div className="flex items-center gap-1.5 text-xs font-medium text-blue-700 dark:text-blue-300 mb-2">
         <Globe className="h-3.5 w-3.5" />
-        联网搜索：{query} — 双源校验
+        {t('联网搜索', 'Web search')}：{query} — {t('双源校验', 'dual-source')}
       </div>
       <div className="grid grid-cols-2 gap-2">
         {sources.slice(0, 2).map((s, i) => (
           <div key={i} className="border rounded-md p-2 bg-background">
             <div className="flex items-center justify-between gap-1 mb-1">
-              <span className="text-xs font-semibold text-foreground line-clamp-1">来源{i + 1}：{s.source}</span>
-              <button onClick={() => open(s.url)} className="text-muted-foreground hover:text-blue-500 shrink-0" title="打开原始链接">
+              <span className="text-xs font-semibold text-foreground line-clamp-1">{t('来源', 'Source')}{i + 1}：{s.source}</span>
+              <button onClick={() => open(s.url)} className="text-muted-foreground hover:text-blue-500 shrink-0" title={t('打开原始链接', 'Open source link')}>
                 <ExternalLink className="h-3 w-3" />
               </button>
             </div>
@@ -71,7 +72,7 @@ function SearchSourceCard({ query, sources }: { query: string; sources: SearchSo
           </div>
         ))}
       </div>
-      <p className="text-[10px] text-muted-foreground mt-1.5">💡 不同来源可能有差异，请对比后判断。AI 已给出推荐信源。</p>
+      <p className="text-[10px] text-muted-foreground mt-1.5">{t('💡 不同来源可能有差异，请对比后判断。AI 已给出推荐信源。', '💡 Sources may differ — compare before trusting. The AI has noted the recommended one.')}</p>
     </div>
   )
 }
@@ -82,10 +83,11 @@ interface MessageBubbleProps {
 }
 
 function MessageBubble({ message, isLast }: MessageBubbleProps): JSX.Element {
+  const { t, isZh } = useT()
   const isUser = message.role === 'user'
   const isStreaming = message.isStreaming
 
-  const displayContent = isUser ? message.content : renderContent(message.content)
+  const displayContent = isUser ? message.content : renderContent(message.content, isZh)
 
   return (
     <div className={cn('flex gap-3 mb-4', isUser ? 'flex-row-reverse' : 'flex-row')}>
@@ -93,7 +95,7 @@ function MessageBubble({ message, isLast }: MessageBubbleProps): JSX.Element {
         'w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-1',
         isUser ? 'bg-primary text-primary-foreground' : 'bg-accent text-accent-foreground'
       )}>
-        {isUser ? '你' : 'AI'}
+        {isUser ? t('你', 'You') : 'AI'}
       </div>
 
       <div className={cn(
@@ -135,10 +137,11 @@ interface OutlineCardProps {
 }
 
 function OutlineCard({ filename, outline, onClose }: OutlineCardProps): JSX.Element {
+  const { t } = useT()
   return (
     <div className="border rounded-lg p-4 bg-accent/30 mb-4">
       <div className="flex items-center justify-between mb-2">
-        <span className="text-sm font-medium">📄 {filename} — 知识骨架</span>
+        <span className="text-sm font-medium">📄 {filename} — {t('知识骨架', 'Outline')}</span>
         <Button variant="ghost" size="sm" onClick={onClose}>✕</Button>
       </div>
       <div className="prose prose-sm dark:prose-invert max-w-none max-h-48 overflow-y-auto">

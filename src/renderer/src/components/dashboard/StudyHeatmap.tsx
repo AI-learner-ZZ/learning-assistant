@@ -1,11 +1,12 @@
 import React from 'react'
 import { cn } from '@/lib/utils'
+import { useT } from '@/lib/i18n'
 
 interface HeatPoint { weekday: number; hour: number; count: number }
 
-const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六']
-
 export function StudyHeatmap({ data }: { data: HeatPoint[] }): JSX.Element {
+  const { t, isZh } = useT()
+  const WEEKDAYS = isZh ? ['日', '一', '二', '三', '四', '五', '六'] : ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
   const max = Math.max(1, ...data.map(d => d.count))
   const lookup = new Map<string, number>()
   for (const d of data) lookup.set(`${d.weekday}-${d.hour}`, d.count)
@@ -23,9 +24,9 @@ export function StudyHeatmap({ data }: { data: HeatPoint[] }): JSX.Element {
 
   return (
     <div className="border rounded-xl p-4 bg-card">
-      <h4 className="text-sm font-medium mb-3">学习时长分布（热力图）</h4>
+      <h4 className="text-sm font-medium mb-3">{t('学习时长分布（热力图）', 'Study-time Heatmap')}</h4>
       {data.length === 0 ? (
-        <p className="text-xs text-muted-foreground py-6 text-center">还没有学习记录。</p>
+        <p className="text-xs text-muted-foreground py-6 text-center">{t('还没有学习记录。', 'No learning records yet.')}</p>
       ) : (
         <div className="overflow-x-auto">
           <div className="inline-block">
@@ -43,7 +44,7 @@ export function StudyHeatmap({ data }: { data: HeatPoint[] }): JSX.Element {
                     <div
                       key={startH}
                       className={cn('w-7 h-5 rounded-sm', intensity(count))}
-                      title={`周${wd} ${bucketLabel(startH)}点：${count} 次`}
+                      title={isZh ? `周${wd} ${bucketLabel(startH)}点：${count} 次` : `${wd} ${bucketLabel(startH)}h: ${count}`}
                     />
                   )
                 })}

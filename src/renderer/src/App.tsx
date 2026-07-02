@@ -137,12 +137,13 @@ export default function App(): JSX.Element {
   }, [setNodeId])
 
   const handleExplainNode = useCallback(async (nodeId: string, nodeName: string) => {
+    const zh = useSettingsStore.getState().settings.language === 'zh'
     setExplanationLoading(true)
     try {
       const explanation = await window.api.tree.explainNecessity(nodeName) as string
-      addToast({ title: `为什么学「${nodeName}」？`, description: explanation })
+      addToast({ title: zh ? `为什么学「${nodeName}」？` : `Why learn "${nodeName}"?`, description: explanation })
     } catch {
-      addToast({ title: '获取解释失败', variant: 'destructive' })
+      addToast({ title: zh ? '获取解释失败' : 'Failed to get explanation', variant: 'destructive' })
     } finally {
       setExplanationLoading(false)
     }

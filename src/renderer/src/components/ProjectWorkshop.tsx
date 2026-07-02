@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog'
 import { ScrollArea } from './ui/scroll-area'
 import { uuid } from '@/lib/utils'
 import { cn } from '@/lib/utils'
+import { useT } from '@/lib/i18n'
 
 const UNLOCK_THRESHOLD = 40
 
@@ -37,6 +38,7 @@ interface ProjectWorkshopProps {
 }
 
 export function ProjectWorkshop({ open, subjectId, onClose }: ProjectWorkshopProps): JSX.Element {
+  const { t } = useT()
   const [coverage, setCoverage] = useState<{ percent: number } | null>(null)
   const [project, setProject] = useState<Project | null>(null)
   const [loading, setLoading] = useState(false)
@@ -97,16 +99,16 @@ export function ProjectWorkshop({ open, subjectId, onClose }: ProjectWorkshopPro
             <Hammer className="h-5 w-5 text-orange-500" />
             {activeStep ? (
               <button className="flex items-center gap-1 text-sm" onClick={() => setActiveStep(null)}>
-                <ChevronLeft className="h-4 w-4" /> 返回项目看板
+                <ChevronLeft className="h-4 w-4" /> {t('返回项目看板', 'Back to board')}
               </button>
-            ) : '渐进式项目工坊'}
+            ) : t('渐进式项目工坊', 'Project Workshop')}
           </DialogTitle>
         </DialogHeader>
 
         {loading && (
           <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
             <Loader2 className="h-6 w-6 animate-spin mb-2" />
-            <p className="text-sm">处理中...</p>
+            <p className="text-sm">{t('处理中...', 'Working...')}</p>
           </div>
         )}
 
@@ -118,7 +120,7 @@ export function ProjectWorkshop({ open, subjectId, onClose }: ProjectWorkshopPro
           <ScrollArea className="flex-1">
             <div className="border-2 border-green-300 dark:border-green-800 rounded-xl p-5 bg-green-50/50 dark:bg-green-950/30">
               <div className="flex items-center gap-2 text-green-700 dark:text-green-300 font-semibold mb-3">
-                <PartyPopper className="h-5 w-5" /> 项目完成报告
+                <PartyPopper className="h-5 w-5" /> {t('项目完成报告', 'Project Report')}
               </div>
               <div className="prose prose-sm dark:prose-invert max-w-none">
                 <ReactMarkdown>{report}</ReactMarkdown>
@@ -130,17 +132,17 @@ export function ProjectWorkshop({ open, subjectId, onClose }: ProjectWorkshopPro
         {!loading && !activeStep && !report && locked && (
           <div className="flex-1 flex flex-col items-center justify-center text-center text-muted-foreground">
             <Lock className="h-10 w-10 mb-3" />
-            <p className="font-medium text-foreground mb-1">毕业项目尚未解锁</p>
-            <p className="text-sm max-w-sm">当知识树掌握度达到 {UNLOCK_THRESHOLD}% 时自动解锁。当前覆盖度 {coverage?.percent ?? 0}%。继续学习吧！</p>
+            <p className="font-medium text-foreground mb-1">{t('毕业项目尚未解锁', 'Capstone project locked')}</p>
+            <p className="text-sm max-w-sm">{t(`当知识树掌握度达到 ${UNLOCK_THRESHOLD}% 时自动解锁。当前覆盖度 ${coverage?.percent ?? 0}%。继续学习吧！`, `Unlocks at ${UNLOCK_THRESHOLD}% mastery. Currently ${coverage?.percent ?? 0}%. Keep learning!`)}</p>
           </div>
         )}
 
         {!loading && !activeStep && !report && !locked && !project && (
           <div className="flex-1 flex flex-col items-center justify-center text-center">
             <Hammer className="h-10 w-10 mb-3 text-orange-500" />
-            <p className="font-medium mb-1">你已解锁毕业项目！</p>
-            <p className="text-sm text-muted-foreground mb-4 max-w-sm">让 AI 根据你已掌握的内容，设计一个综合实践项目。</p>
-            <Button onClick={generate}>生成毕业项目</Button>
+            <p className="font-medium mb-1">{t('你已解锁毕业项目！', 'Capstone project unlocked!')}</p>
+            <p className="text-sm text-muted-foreground mb-4 max-w-sm">{t('让 AI 根据你已掌握的内容，设计一个综合实践项目。', 'Let the AI design a hands-on project from what you have mastered.')}</p>
+            <Button onClick={generate}>{t('生成毕业项目', 'Generate project')}</Button>
           </div>
         )}
 
@@ -154,7 +156,7 @@ export function ProjectWorkshop({ open, subjectId, onClose }: ProjectWorkshopPro
               {(['todo', 'in_progress', 'done'] as const).map(col => (
                 <div key={col} className="bg-muted/40 rounded-lg p-2">
                   <p className="text-xs font-medium text-muted-foreground mb-2 px-1">
-                    {col === 'todo' ? '待开始' : col === 'in_progress' ? '进行中' : '已完成'}
+                    {col === 'todo' ? t('待开始', 'To do') : col === 'in_progress' ? t('进行中', 'In progress') : t('已完成', 'Done')}
                   </p>
                   <div className="space-y-2">
                     {project.steps.filter(s => s.status === col).map(step => (
@@ -164,7 +166,7 @@ export function ProjectWorkshop({ open, subjectId, onClose }: ProjectWorkshopPro
                         <div className="flex gap-1">
                           <Button size="sm" variant="outline" className="h-6 text-xs px-2 flex-1"
                             onClick={() => { setActiveStep(step); if (step.status === 'todo') setStepStatus(step, 'in_progress') }}>
-                            进入
+                            {t('进入', 'Open')}
                           </Button>
                           {step.status !== 'done' && (
                             <Button size="sm" variant="ghost" className="h-6 text-xs px-2" onClick={() => setStepStatus(step, 'done')}>
@@ -180,7 +182,7 @@ export function ProjectWorkshop({ open, subjectId, onClose }: ProjectWorkshopPro
             </div>
             {allDone && project.status !== 'completed' && (
               <Button className="w-full mt-4" onClick={completeProject}>
-                <PartyPopper className="h-4 w-4 mr-1" /> 全部完成！生成项目报告
+                <PartyPopper className="h-4 w-4 mr-1" /> {t('全部完成！生成项目报告', 'All done! Generate report')}
               </Button>
             )}
           </ScrollArea>
@@ -191,6 +193,7 @@ export function ProjectWorkshop({ open, subjectId, onClose }: ProjectWorkshopPro
 }
 
 function StepChat({ step, onStatusChange }: { step: Step; onStatusChange: (s: 'done') => void }): JSX.Element {
+  const { t } = useT()
   const [messages, setMessages] = useState<Msg[]>([])
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
@@ -243,7 +246,7 @@ function StepChat({ step, onStatusChange }: { step: Step; onStatusChange: (s: 'd
       <ScrollArea className="flex-1 pr-2">
         {messages.length === 0 && (
           <p className="text-center text-xs text-muted-foreground py-8">
-            粘贴你的代码或报错截图描述，导师会用反问引导你调试（不会直接给答案）。
+            {t('粘贴你的代码或报错截图描述，导师会用反问引导你调试（不会直接给答案）。', 'Paste your code or describe the error — the mentor guides you to debug with questions, not answers.')}
           </p>
         )}
         {messages.map(m => (
@@ -261,7 +264,7 @@ function StepChat({ step, onStatusChange }: { step: Step; onStatusChange: (s: 'd
       <div className="flex gap-2 mt-2">
         <Textarea
           className="flex-1 min-h-[44px] max-h-32"
-          placeholder="粘贴代码 / 描述报错（Enter 发送）"
+          placeholder={t('粘贴代码 / 描述报错（Enter 发送）', 'Paste code / describe error (Enter to send)')}
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
@@ -271,7 +274,7 @@ function StepChat({ step, onStatusChange }: { step: Step; onStatusChange: (s: 'd
           <Button size="icon" disabled={!input.trim() || busy} onClick={send}>
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </Button>
-          <Button size="icon" variant="outline" title="标记完成" onClick={() => onStatusChange('done')}>
+          <Button size="icon" variant="outline" title={t('标记完成', 'Mark done')} onClick={() => onStatusChange('done')}>
             <CheckCircle2 className="h-4 w-4" />
           </Button>
         </div>

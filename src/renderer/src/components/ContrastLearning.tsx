@@ -4,6 +4,7 @@ import { Loader2, Scale, CheckCircle2, XCircle } from 'lucide-react'
 import { Button } from './ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog'
 import { cn } from '@/lib/utils'
+import { useT } from '@/lib/i18n'
 
 interface ContrastWorkshop {
   errorType: string
@@ -23,6 +24,7 @@ interface ContrastLearningProps {
 }
 
 export function ContrastLearning({ open, errorType, onClose, onResolved }: ContrastLearningProps): JSX.Element {
+  const { t } = useT()
   const [workshop, setWorkshop] = useState<ContrastWorkshop | null>(null)
   const [loading, setLoading] = useState(false)
   const [chosen, setChosen] = useState<number | null>(null)
@@ -59,20 +61,20 @@ export function ContrastLearning({ open, errorType, onClose, onResolved }: Contr
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Scale className="h-5 w-5 text-amber-500" />
-            对比学习工作坊
-            <span className="text-xs font-normal text-muted-foreground">（你在「{errorType}」上反复出错）</span>
+            {t('对比学习工作坊', 'Contrast Learning Workshop')}
+            <span className="text-xs font-normal text-muted-foreground">{t(`（你在「${errorType}」上反复出错）`, `(recurring "${errorType}" errors)`)}</span>
           </DialogTitle>
         </DialogHeader>
 
         {loading && (
           <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
             <Loader2 className="h-6 w-6 animate-spin mb-2" />
-            <p className="text-sm">AI 正在生成对比练习...</p>
+            <p className="text-sm">{t('AI 正在生成对比练习...', 'AI is generating a contrast exercise...')}</p>
           </div>
         )}
 
         {!loading && !workshop && (
-          <div className="py-12 text-center text-muted-foreground text-sm">暂时无法生成对比练习，请稍后再试。</div>
+          <div className="py-12 text-center text-muted-foreground text-sm">{t('暂时无法生成对比练习，请稍后再试。', 'Could not generate an exercise right now, please try later.')}</div>
         )}
 
         {!loading && workshop && (
@@ -117,19 +119,19 @@ export function ContrastLearning({ open, errorType, onClose, onResolved }: Contr
               )}>
                 <div className="flex items-center gap-1.5 font-medium mb-1">
                   {result.correct
-                    ? <><CheckCircle2 className="h-4 w-4 text-green-500" /> 答对了！</>
-                    : <><XCircle className="h-4 w-4 text-red-500" /> 还需努力</>}
+                    ? <><CheckCircle2 className="h-4 w-4 text-green-500" /> {t('答对了！', 'Correct!')}</>
+                    : <><XCircle className="h-4 w-4 text-red-500" /> {t('还需努力', 'Not quite')}</>}
                 </div>
                 <p className="text-muted-foreground">{result.feedback}</p>
                 <div className="prose prose-sm dark:prose-invert max-w-none mt-1">
                   <ReactMarkdown>{workshop.explanation}</ReactMarkdown>
                 </div>
                 <Button className="mt-3 w-full" onClick={onClose}>
-                  {result.correct ? '完成，清除该错误计数' : '我明白了'}
+                  {result.correct ? t('完成，清除该错误计数', 'Done — clear this error count') : t('我明白了', 'Got it')}
                 </Button>
               </div>
             ) : (
-              <Button className="w-full" disabled={chosen === null} onClick={submit}>提交答案</Button>
+              <Button className="w-full" disabled={chosen === null} onClick={submit}>{t('提交答案', 'Submit')}</Button>
             )}
           </div>
         )}

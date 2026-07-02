@@ -6,6 +6,7 @@ import { Textarea } from './ui/textarea'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog'
 import { ScrollArea } from './ui/scroll-area'
 import { uuid, cn } from '@/lib/utils'
+import { useT } from '@/lib/i18n'
 
 interface Msg { id: string; role: 'user' | 'assistant'; content: string; streaming?: boolean }
 
@@ -18,6 +19,7 @@ interface FreeExploreProps {
 }
 
 export function FreeExplore({ open, onClose, onSubjectCreated }: FreeExploreProps): JSX.Element {
+  const { t } = useT()
   const [messages, setMessages] = useState<Msg[]>([])
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
@@ -82,8 +84,8 @@ export function FreeExplore({ open, onClose, onSubjectCreated }: FreeExploreProp
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Compass className="h-5 w-5 text-teal-500" />
-            自由探索
-            <span className="text-xs font-normal text-muted-foreground">（无系统角色限制的通用对话）</span>
+            {t('自由探索', 'Free Explore')}
+            <span className="text-xs font-normal text-muted-foreground">{t('（无系统角色限制的通用对话）', '(general chat, no tutor constraints)')}</span>
           </DialogTitle>
         </DialogHeader>
 
@@ -91,10 +93,11 @@ export function FreeExplore({ open, onClose, onSubjectCreated }: FreeExploreProp
           <div className="flex items-center gap-2 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 rounded-lg px-3 py-2 text-sm">
             <Sparkles className="h-4 w-4 text-amber-500 shrink-0" />
             <span className="flex-1 text-amber-800 dark:text-amber-300">
-              你已在自由探索停留超过 15 分钟。要把「{firstTopicRef.current.slice(0, 20)}」设为副科，与主科并行学习吗？
+              {t(`你已在自由探索停留超过 15 分钟。要把「${firstTopicRef.current.slice(0, 20)}」设为副科，与主科并行学习吗？`,
+                `You've explored freely for over 15 min. Turn "${firstTopicRef.current.slice(0, 20)}" into a parallel minor subject?`)}
             </span>
             <Button size="sm" variant="outline" className="h-7 gap-1" disabled={creatingSubject} onClick={setAsSubject}>
-              {creatingSubject ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}设为副科
+              {creatingSubject ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}{t('设为副科', 'Make minor')}
             </Button>
             <button onClick={() => setShowDeviation(false)}><X className="h-4 w-4 text-muted-foreground" /></button>
           </div>
@@ -104,7 +107,7 @@ export function FreeExplore({ open, onClose, onSubjectCreated }: FreeExploreProp
           {messages.length === 0 && (
             <div className="text-center text-muted-foreground text-sm py-12">
               <Compass className="h-10 w-10 mx-auto mb-2 opacity-50" />
-              <p>随便问点什么吧 — 这里不受当前学科约束。</p>
+              <p>{t('随便问点什么吧 — 这里不受当前学科约束。', 'Ask anything — no subject constraints here.')}</p>
             </div>
           )}
           {messages.map(m => (
@@ -123,7 +126,7 @@ export function FreeExplore({ open, onClose, onSubjectCreated }: FreeExploreProp
         <div className="flex gap-2 mt-2">
           <Textarea
             className="flex-1 min-h-[44px] max-h-32"
-            placeholder="自由提问（Enter 发送）"
+            placeholder={t('自由提问（Enter 发送）', 'Ask anything (Enter to send)')}
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
