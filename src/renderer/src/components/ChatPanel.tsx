@@ -3,7 +3,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
 import rehypeHighlight from 'rehype-highlight'
-import { Send, Trash2, Lock, Loader2, Upload, ExternalLink, Globe, FileText, Save } from 'lucide-react'
+import { Send, Trash2, Lock, Loader2, Upload, ExternalLink, Globe, FileText, Save, BookMarked, BookOpen, Sparkles } from 'lucide-react'
 import { Button } from './ui/button'
 import { Textarea } from './ui/textarea'
 import { ScrollArea } from './ui/scroll-area'
@@ -11,6 +11,8 @@ import { Badge } from './ui/badge'
 import { LectureModeSwitch } from './LectureModeSwitch'
 import { MermaidDiagram } from './MermaidDiagram'
 import { SvgDiagram } from './SvgDiagram'
+import { NodeResources } from './NodeResources'
+import { ReadingPane } from './ReadingPane'
 import { useChatStore, Message, SearchSource } from '@/stores/useChatStore'
 import { useTreeStore } from '@/stores/useTreeStore'
 import { useSettingsStore } from '@/stores/useSettingsStore'
@@ -167,6 +169,10 @@ export function ChatPanel({ nodeId, nodeName, nodeDescription, headerInset }: Ch
   const [uploadingFile, setUploadingFile] = useState(false)
   const [summary, setSummary] = useState<string | null>(null)
   const [summarizing, setSummarizing] = useState(false)
+  const [primerLoading, setPrimerLoading] = useState(false)
+  const [resourcesOpen, setResourcesOpen] = useState(false)
+  const [readingOpen, setReadingOpen] = useState(false)
+  const primerRequested = useRef<Set<string>>(new Set())
   const bottomRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -174,11 +180,26 @@ export function ChatPanel({ nodeId, nodeName, nodeDescription, headerInset }: Ch
   const t = (zh: string, en: string): string => isZh ? zh : en
 
   useEffect(() => {
-    if (nodeId) {
-      loadHistory(nodeId)
-      setSummary(null)
-    }
-  }, [nodeId, loadHistory])
+    if (!nodeId) return
+    setSummary(null)
+    let cancelled = false
+    ;(async () => {
+      await loadHistory(nodeId)
+      if (cancelled) return
+      const empty = useChatStore.getState().messages.length === 0
+      if (empty && !primerRequested.current.has(nodeId)) {
+        primerRequested.current.add(nodeId)
+        setPrimerLoading(true)
+        try {
+          await window.api.node.primer({ nodeId, nodeName: nodeName || '', nodeDescription, learnedNodes: getLearnedNodeNames() })
+          if (!cancelled) await loadHistory(nodeId)
+        } finally {
+          if (!cancelled) setPrimerLoading(false)
+        }
+      }
+    })()
+    return () => { cancelled = true }
+  }, [nodeId])
 
   useEffect(() => {
     window.api.lecture.getStyle().then(s => setLectureStyle(s as typeof lectureStyle))
@@ -201,6 +222,16 @@ export function ChatPanel({ nodeId, nodeName, nodeDescription, headerInset }: Ch
       learnedNodes: getLearnedNodeNames()
     })
   }, [input, isGenerating, sendMessage, nodeName, nodeDescription, getLearnedNodeNames, nodeId, markNodeLearning])
+
+  const handleAsk = useCallback(async (prompt: string) => {
+    if (isGenerating) return
+    if (nodeId) markNodeLearning(nodeId)
+    await sendMessage(prompt, {
+      nodeName: nodeName || undefined,
+      nodeDescription: nodeDescription || undefined,
+      learnedNodes: getLearnedNodeNames()
+    })
+  }, [isGenerating, sendMessage, nodeName, nodeDescription, getLearnedNodeNames, nodeId, markNodeLearning])
 
   const handleKeyDown = (e: React.KeyboardEvent): void => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -269,6 +300,12 @@ export function ChatPanel({ nodeId, nodeName, nodeDescription, headerInset }: Ch
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <LectureModeSwitch value={lectureStyle} onChange={setLectureStyle} disabled={isGenerating} />
+          <Button variant="ghost" size="icon" title={t('学习资源', 'Learning resources')} onClick={() => setResourcesOpen(true)}>
+            <BookMarked className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="icon" title={t('阅读模式', 'Reading mode')} onClick={() => setReadingOpen(true)}>
+            <BookOpen className="h-4 w-4" />
+          </Button>
           {isLocked && (
             <Badge variant="secondary" className="gap-1 text-xs">
               <Lock className="h-3 w-3" />
@@ -293,7 +330,14 @@ export function ChatPanel({ nodeId, nodeName, nodeDescription, headerInset }: Ch
       </div>
 
       <ScrollArea className="flex-1 px-4 py-4">
-        {messages.length === 0 && (
+        {messages.length === 0 && primerLoading && (
+          <div className="flex flex-col items-center justify-center text-muted-foreground text-sm py-16 gap-2">
+            <Sparkles className="h-6 w-6 text-primary animate-pulse" />
+            <p className="font-medium">{t(`正在为「${nodeName}」准备入门简报...`, `Preparing an orientation primer for "${nodeName}"...`)}</p>
+            <p className="text-xs">{t('先了解这个概念是什么、为什么重要，再开始对话。', 'Get oriented on what this is and why it matters before we dive in.')}</p>
+          </div>
+        )}
+        {messages.length === 0 && !primerLoading && (
           <div className="text-center text-muted-foreground text-sm py-12">
             <div className="text-3xl mb-3">🎓</div>
             <p className="font-medium mb-1">{t(`开始学习「${nodeName}」`, `Start learning "${nodeName}"`)}</p>
@@ -365,6 +409,9 @@ export function ChatPanel({ nodeId, nodeName, nodeDescription, headerInset }: Ch
           </Button>
         </div>
       </div>
+
+      <NodeResources open={resourcesOpen} nodeName={nodeName || ''} onClose={() => setResourcesOpen(false)} />
+      <ReadingPane open={readingOpen} onClose={() => setReadingOpen(false)} onAsk={handleAsk} />
     </div>
   )
 }

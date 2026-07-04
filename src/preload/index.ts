@@ -76,6 +76,15 @@ const api = {
     import: () => ipcRenderer.invoke('tree:import')
   },
 
+  node: {
+    primer: (payload: { nodeId: string; nodeName: string; nodeDescription: string | null; learnedNodes: string[] }) =>
+      ipcRenderer.invoke('node:primer', payload)
+  },
+
+  resources: {
+    find: (nodeName: string) => ipcRenderer.invoke('resources:find', nodeName)
+  },
+
   chat: {
     getHistory: (nodeId: string) => ipcRenderer.invoke('chat:get-history', nodeId),
     clear: (nodeId: string) => ipcRenderer.invoke('chat:clear', nodeId),

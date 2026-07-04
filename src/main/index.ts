@@ -1,8 +1,8 @@
 import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron'
 import path from 'path'
-import { initDatabase, getNodes, getAllNodes, getNodeById, upsertNode, updateNodeStatus, deleteNode, updateNodeRelations, updateTaskStatus, saveMessage, getMessages, clearMessages, logError, getErrors, setPref, getPref, getTodayTasks, upsertSubject, getSubjects, deleteSubject, countSubjects, insertLearningRecord, getDailyAccuracy, resolveErrorsByType, createProject, getProjects, updateProjectStatus, createProjectStep, getProjectSteps, updateProjectStepStatus, getBottleneckCandidates, getStudyTimeDistribution, getAccuracyByHour, type KnowledgeNode } from './database'
+import { initDatabase, getNodes, getAllNodes, getNodeById, upsertNode, updateNodeStatus, deleteNode, updateNodeRelations, updateTaskStatus, saveMessage, getMessages, clearMessages, logError, getErrors, setPref, getPref, getTodayTasks, upsertSubject, getSubjects, deleteSubject, countSubjects, insertLearningRecord, getDailyAccuracy, resolveErrorsByType, createProject, getProjects, updateProjectStatus, createProjectStep, getProjectSteps, updateProjectStepStatus, getBottleneckCandidates, getStudyTimeDistribution, getAccuracyByHour, getReviewState, type KnowledgeNode } from './database'
 import { saveApiKey, getApiKey, setSetting, getSetting, getAllSettings, isSetupComplete } from './settings'
-import { streamChat, buildSystemPrompt, generateOutline, explainNodeNecessity, generateSummary, generateContrastWorkshop, gradeChoice, generateKnowledgeTree, generateProject, buildProjectStepPrompt, generateProjectReport, generateDefenseQuestions, gradeDefense, generateBottleneckReport, resetClient as resetAiClient, type LectureStyle, type ChatMessage } from './aiService'
+import { streamChat, buildSystemPrompt, generateOutline, explainNodeNecessity, generateSummary, generateContrastWorkshop, gradeChoice, generateKnowledgeTree, generateProject, buildProjectStepPrompt, generateProjectReport, generateDefenseQuestions, gradeDefense, generateBottleneckReport, generateNodePrimer, curateResources, suggestResourceSearch, resetClient as resetAiClient, type LectureStyle, type TeachingStance, type ChatMessage } from './aiService'
 import { parseFile } from './fileParser'
 import { listTemplates, loadTemplate, createSubjectFromTree } from './templateLoader'
 import { recordReview, getHighRiskNodes } from './spacedRepetition'
@@ -20,6 +20,14 @@ import { randomUUID } from 'crypto'
 import fs from 'fs'
 
 const SEARCH_MARKER = /FUNCTION_CALL:search:(.+)/
+
+function nodeMastery(nodeId: string | null): TeachingStance {
+  if (!nodeId) return 'learning'
+  const rs = getReviewState(nodeId)
+  if (!rs || !rs.last_reviewed_at) return 'novice'
+  if (rs.repetitions >= 2 && rs.last_correct_rate >= 0.7) return 'advanced'
+  return 'learning'
+}
 
 let mainWindow: BrowserWindow | null = null
 
@@ -187,6 +195,29 @@ function registerIpcHandlers(): void {
     return explainNodeNecessity(nodeName, lang)
   })
 
+  ipcMain.handle('node:primer', async (_, payload: { nodeId: string; nodeName: string; nodeDescription: string | null; learnedNodes: string[] }) => {
+    const lang = getSetting('language')
+    const primer = await generateNodePrimer(payload.nodeName, payload.nodeDescription, payload.learnedNodes, lang)
+    saveMessage({ id: randomUUID(), node_id: payload.nodeId, subject_id: null, role: 'assistant', content: primer })
+    return primer
+  })
+
+  ipcMain.handle('resources:find', async (_, nodeName: string) => {
+    const lang = getSetting('language')
+    if (!isSearchConfigured()) {
+      const suggestion = await suggestResourceSearch(nodeName, lang)
+      return { configured: false, items: [], suggestion }
+    }
+    try {
+      const query = lang === 'zh' ? `${nodeName} 教程 入门 讲解` : `${nodeName} tutorial course beginner`
+      const results = await performSearch(query)
+      const items = await curateResources(nodeName, results, lang)
+      return { configured: true, items, suggestion: '' }
+    } catch (e) {
+      return { configured: true, items: [], suggestion: '', error: e instanceof Error ? e.message : String(e) }
+    }
+  })
+
   ipcMain.handle('chat:get-history', (_, nodeId: string) => getMessages(nodeId))
 
   ipcMain.handle('chat:clear', (_, nodeId: string) => clearMessages(nodeId))
@@ -213,7 +244,8 @@ function registerIpcHandlers(): void {
       language: lang,
       lectureStyle,
       difficulty: difficultyDescriptor(getDifficultyLevel(), isZh),
-      searchEnabled
+      searchEnabled,
+      mastery: nodeMastery(payload.nodeId)
     })
 
     const userMsg = payload.messages[payload.messages.length - 1]

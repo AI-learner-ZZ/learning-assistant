@@ -190,6 +190,32 @@ export const mockApi = {
     export: (id: string) => Promise.resolve(download('knowledge-tree.json', JSON.stringify({ subject: SUBJECT, nodes: NODES }, null, 2))),
     import: () => Promise.resolve(null)
   },
+  node: {
+    primer: (p: { nodeId: string; nodeName: string }) => {
+      const primer = [
+        `Let's get oriented on **${p.nodeName}** before diving in.`,
+        '',
+        '**What it is** — the core idea in one intuitive sentence.',
+        "**Why it matters** — where you'll actually use it downstream.",
+        "**What you already know** — it builds on concepts you've mastered.",
+        '**A common pitfall** — the mistake most beginners make here.',
+        '',
+        '> 💡 In the desktop app this primer is generated live by your own AI and adapts to what you already know.'
+      ].join('\n')
+      HISTORY[p.nodeId] = [{ id: 'primer-' + p.nodeId, role: 'assistant', content: primer }, ...(HISTORY[p.nodeId] || [])]
+      return delay(500).then(() => primer)
+    }
+  },
+  resources: {
+    find: (nodeName: string) => delay(600).then(() => ({
+      configured: true,
+      items: [
+        { title: `${nodeName} — overview`, url: `https://en.wikipedia.org/wiki/${encodeURIComponent(nodeName)}`, source: 'wikipedia.org', why: 'A solid, neutral overview to orient yourself.' },
+        { title: `${nodeName} explained (video)`, url: `https://www.youtube.com/results?search_query=${encodeURIComponent(nodeName + ' tutorial')}`, source: 'youtube.com', why: 'Visual walkthrough for intuition.' }
+      ],
+      suggestion: ''
+    }))
+  },
   chat: {
     getHistory: (nodeId: string) => Promise.resolve(HISTORY[nodeId] || []),
     clear: () => Promise.resolve(),
@@ -198,7 +224,7 @@ export const mockApi = {
       streamHandlers.set(channelId, cb)
       return () => streamHandlers.delete(channelId)
     },
-    onSearch: () => () => { /* no search in demo */ }
+    onSearch: () => () => {}
   },
   explore: {
     chat: (p: { channelId: string }) => { streamReply(p.channelId, 'Ask me anything — in the demo this is a scripted reply. In the app it is an unconstrained chat with your model.'); return Promise.resolve({ success: true }) }
@@ -242,7 +268,7 @@ export const mockApi = {
       explanation: 'L1 induces sparsity, zeroing out irrelevant features.'
     })),
     submit: (p: { chosenIndex: number; correctIndex: number }) => Promise.resolve({ correct: p.chosenIndex === p.correctIndex, feedback: p.chosenIndex === p.correctIndex ? 'Correct!' : 'Not quite — L1 is the sparse one.' }),
-    onAvailable: () => () => { /* noop */ }
+    onAvailable: () => () => {}
   },
   search: {
     getConfig: () => Promise.resolve({ provider: 'none', searxngUrl: '', configured: false }),

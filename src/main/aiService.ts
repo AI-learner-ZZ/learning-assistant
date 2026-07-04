@@ -23,6 +23,18 @@ function chatModel(): string {
 }
 
 export type LectureStyle = 'intuitive' | 'formula' | 'analogy'
+export type TeachingStance = 'novice' | 'learning' | 'advanced'
+
+const STANCE_ZH: Record<TeachingStance, string> = {
+  novice: '【教学姿态：直接教学（新手）】学习者对本节几乎零基础。请先用清晰、具体的语言**直接把核心概念讲清楚**——是什么、为什么重要、怎么用；给一个"示范例"(worked example)和一个生活类比。讲完后**只**问一个简单的确认性问题（[QUESTION]）检查是否听懂。切勿一上来就反问，也不要期待他自行推导。',
+  learning: '【教学姿态：半教半问（进行中）】学习者已有初步基础。讲一半、留一半：给出关键线索或框架，再用 [QUESTION] 引导他补全剩下的推理。',
+  advanced: '【教学姿态：苏格拉底式（接近掌握）】学习者已基本掌握。不直接给答案，先用 [QUESTION] 追问其思路，引导其自行推导与深化，仅在其卡住时给最小提示。'
+}
+const STANCE_EN: Record<TeachingStance, string> = {
+  novice: '[TEACHING STANCE: Direct instruction (novice)] The learner is near-zero on this node. First **explain the core concept clearly and concretely** — what it is, why it matters, how to use it; give one worked example and one everyday analogy. Then ask ONE simple check question ([QUESTION]) to confirm understanding. Do NOT open with a probing question or expect them to derive it.',
+  learning: '[TEACHING STANCE: Half-teach, half-ask (in progress)] The learner has some basis. Teach half, leave half: give the key clue or framework, then use [QUESTION] to guide them to complete the reasoning.',
+  advanced: '[TEACHING STANCE: Socratic (near mastery)] The learner mostly has it. Do not give answers directly; probe their reasoning with [QUESTION] first, guiding them to derive and deepen, giving minimal hints only when stuck.'
+}
 
 const STYLE_INSTRUCTION_ZH: Record<LectureStyle, string> = {
   intuitive: '本次讲解请用"直觉版"：用最朴素的生活直觉和画面感来解释，避免公式与术语。',
@@ -44,9 +56,12 @@ export function buildSystemPrompt(context: {
   lectureStyle?: LectureStyle
   difficulty?: string
   searchEnabled?: boolean
+  mastery?: TeachingStance
 }): string {
   const lang = context.language || 'zh'
   const isZh = lang === 'zh'
+  const stance = context.mastery || 'learning'
+  const stanceStr = (isZh ? STANCE_ZH : STANCE_EN)[stance]
 
   const learnedStr = context.learnedNodes?.length
     ? (isZh ? `\n已掌握节点: ${context.learnedNodes.join('、')}` : `\nMastered: ${context.learnedNodes.join(', ')}`)
@@ -73,10 +88,12 @@ export function buildSystemPrompt(context: {
     : '\n9. No web access: you cannot browse. For real-time data, say "consider enabling web search or provide the data manually" — never fabricate.'
 
   if (isZh) {
-    return `你是用户专属的"苏格拉底式学习导师"，精通认知科学与系统学习法。
+    return `你是用户专属的自适应学习导师，精通认知科学与系统学习法。
+
+${stanceStr}
 
 【铁律】
-1. 不直接给答案：用户提问时，先追问其思考过程，引导其自行推导。
+1. 教学姿态优先：严格遵循上面的【教学姿态】——对新手先直接把概念讲清楚、给示范例，别一上来就反问；对进阶者才用追问逼其推导。
 2. 强制追问：当你需要用户回答时，在问题前加 [QUESTION] 标记，格式：[QUESTION] 你的问题内容。用户必须回答后对话才能继续。
 3. 判分与记录：在追问结束后，评估用户回答，用如下格式输出：[SCORE] 正确|部分正确|错误 [ERROR_TYPE] 概念混淆|计算错误|应用偏差|无（若无错误则为"无"）
 4. 循序渐进：讲解不超过500字，先给直觉理解再给公式。
@@ -97,13 +114,15 @@ export function buildSystemPrompt(context: {
 
 【当前学习上下文】${nodeCtx}${learnedStr}${weakStr}${styleStr}${difficultyStr}
 
-记住：你不是知识库，你是逼用户思考的"严苛但温暖的教练"。`
+记住：对新手先讲清楚、打好地基，对进阶者才逼他思考——始终温暖、有耐心。`
   }
 
-  return `You are the user's dedicated "Socratic Learning Mentor", expert in cognitive science and systematic learning.
+  return `You are the user's dedicated adaptive learning mentor, expert in cognitive science and systematic learning.
+
+${stanceStr}
 
 [RULES]
-1. Never give direct answers: when the user asks, first probe their thinking and guide them to derive the answer themselves.
+1. Stance first: strictly follow the [TEACHING STANCE] above — for novices, explain clearly and give a worked example first (do NOT open with a probing question); only use Socratic questioning for advanced learners.
 2. Forced questioning: when you need the user to answer, prefix your question with [QUESTION], format: [QUESTION] your question. The conversation cannot proceed until the user responds.
 3. Scoring: after each Q&A, evaluate the response: [SCORE] Correct|Partial|Incorrect [ERROR_TYPE] ConceptConfusion|CalculationError|ApplicationError|None
 4. Incremental: explanations max 500 words, intuition first, formula second.
@@ -124,7 +143,7 @@ export function buildSystemPrompt(context: {
 
 [CURRENT CONTEXT]${nodeCtx}${learnedStr}${weakStr}${styleStr}${difficultyStr}
 
-Remember: you are not a database — you are a strict but warm coach who forces the user to think.`
+Remember: for novices, explain clearly and build the foundation first; only push advanced learners to think — always warm and patient.`
 }
 
 export interface ChatMessage {
@@ -255,6 +274,88 @@ export async function explainNodeNecessity(nodeName: string, language: string): 
     messages: [{ role: 'user', content: prompt }]
   })
 
+  return resp.choices[0].message.content || ''
+}
+
+export async function generateNodePrimer(
+  nodeName: string,
+  nodeDescription: string | null,
+  learnedNodes: string[],
+  language: string
+): Promise<string> {
+  const openai = getClient()
+  const isZh = language === 'zh'
+  const learned = learnedNodes.slice(0, 8).join(isZh ? '、' : ', ') || (isZh ? '（暂无）' : '(none yet)')
+  const prompt = isZh
+    ? `为一个零基础学习者写一段「${nodeName}」的**入门定向简报**（150-250字，Markdown）。${nodeDescription ? `节点简介：${nodeDescription}。` : ''}
+必须包含四小节（用 **加粗** 小标题）：
+- **是什么**：一句直觉性的定义
+- **为什么重要 / 用在哪**
+- **你已具备的基础**：结合他已掌握的：${learned}
+- **一个常见误区**
+语气亲切，像老师带你进门。**不要提问，不要用 [QUESTION] 标记，不要判分。**`
+    : `Write an **orientation primer** for a total beginner on "${nodeName}" (150-250 words, Markdown). ${nodeDescription ? `Node blurb: ${nodeDescription}. ` : ''}
+Include four short sections (bold sub-headings):
+- **What it is**: one intuitive definition
+- **Why it matters / where it's used**
+- **What you already know**: connect to what they've mastered: ${learned}
+- **One common pitfall**
+Warm, welcoming tone, like a teacher easing them in. **Do NOT ask questions, do NOT use the [QUESTION] marker, do NOT score.**`
+
+  const resp = await openai.chat.completions.create({
+    model: chatModel(),
+    messages: [{ role: 'user', content: prompt }],
+    max_tokens: 600
+  })
+  return resp.choices[0].message.content || ''
+}
+
+export interface ResourceItem { title: string; url: string; source: string; why: string }
+
+export async function curateResources(
+  nodeName: string,
+  results: { title: string; snippet: string; url: string; source: string }[],
+  language: string
+): Promise<ResourceItem[]> {
+  if (results.length === 0) return []
+  const openai = getClient()
+  const isZh = language === 'zh'
+  const list = results.slice(0, 8).map((r, i) => `${i}. ${r.title} — ${r.source}\n${r.snippet}\n${r.url}`).join('\n\n')
+  const prompt = isZh
+    ? `学习者正在学「${nodeName}」。从以下真实搜索结果中，挑出最适合初学者的 3 个学习资源（教程/课程/讲义/优质视频/文章），每个给一句"为什么推荐"。严格以 JSON 数组返回，url 必须原样来自结果，不要编造：
+[{"title":"...","url":"...","source":"...","why":"一句话理由"}]
+
+搜索结果：
+${list}`
+    : `The learner is studying "${nodeName}". From these REAL search results, pick the 3 best beginner-friendly resources (tutorial/course/notes/quality video/article), each with a one-line "why". Return a strict JSON array; urls must come verbatim from the results, do not fabricate:
+[{"title":"...","url":"...","source":"...","why":"one-line reason"}]
+
+Results:
+${list}`
+  const resp = await openai.chat.completions.create({
+    model: chatModel(),
+    messages: [{ role: 'user', content: prompt }],
+    temperature: 0.3
+  })
+  const text = resp.choices[0].message.content || '[]'
+  const m = text.match(/\[[\s\S]*\]/)
+  try {
+    return m ? JSON.parse(m[0]) : []
+  } catch {
+    return []
+  }
+}
+
+export async function suggestResourceSearch(nodeName: string, language: string): Promise<string> {
+  const openai = getClient()
+  const isZh = language === 'zh'
+  const prompt = isZh
+    ? `学习者在学「${nodeName}」但未开启联网搜索。请用 100 字以内，给出 3-4 个适合搜索的关键词/资源类型建议（例如"XX 入门教程""XX 可视化 讲解"），并说明可去哪类平台找（如 YouTube、B站、经典教材、官方文档）。不要编造具体链接。`
+    : `The learner is studying "${nodeName}" but web search is off. In under 100 words, suggest 3-4 search keywords/resource types (e.g. "XX beginner tutorial", "XX visual explanation") and where to look (YouTube, classic textbooks, official docs). Do NOT invent specific links.`
+  const resp = await openai.chat.completions.create({
+    model: chatModel(),
+    messages: [{ role: 'user', content: prompt }]
+  })
   return resp.choices[0].message.content || ''
 }
 

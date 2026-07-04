@@ -1,13 +1,14 @@
 import React from 'react'
 import { Lightbulb, Sigma, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useT } from '@/lib/i18n'
 
 export type LectureStyle = 'intuitive' | 'formula' | 'analogy'
 
-const MODES: { key: LectureStyle; label: string; icon: typeof Lightbulb }[] = [
-  { key: 'intuitive', label: '直觉版', icon: Lightbulb },
-  { key: 'formula', label: '公式版', icon: Sigma },
-  { key: 'analogy', label: '类比版', icon: Sparkles }
+const MODES: { key: LectureStyle; label: [string, string]; icon: typeof Lightbulb }[] = [
+  { key: 'intuitive', label: ['直觉版', 'Intuitive'], icon: Lightbulb },
+  { key: 'formula', label: ['公式版', 'Formula'], icon: Sigma },
+  { key: 'analogy', label: ['类比版', 'Analogy'], icon: Sparkles }
 ]
 
 interface LectureModeSwitchProps {
@@ -17,6 +18,7 @@ interface LectureModeSwitchProps {
 }
 
 export function LectureModeSwitch({ value, onChange, disabled }: LectureModeSwitchProps): JSX.Element {
+  const { t } = useT()
   return (
     <div className="flex items-center gap-1 bg-muted rounded-lg p-0.5">
       {MODES.map(({ key, label, icon: Icon }) => (
@@ -30,10 +32,10 @@ export function LectureModeSwitch({ value, onChange, disabled }: LectureModeSwit
               ? 'bg-background text-foreground shadow-sm'
               : 'text-muted-foreground hover:text-foreground'
           )}
-          title={`用${label}方式讲解`}
+          title={t(`用${label[0]}方式讲解`, `Explain in ${label[1].toLowerCase()} style`)}
         >
           <Icon className="h-3.5 w-3.5" />
-          {label}
+          {t(label[0], label[1])}
         </button>
       ))}
     </div>
