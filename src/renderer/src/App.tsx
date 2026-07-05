@@ -11,6 +11,8 @@ import { KnowledgeSeed } from './components/KnowledgeSeed'
 import { FreeExplore } from './components/FreeExplore'
 import { ProjectWorkshop } from './components/ProjectWorkshop'
 import { DefenseMode } from './components/DefenseMode'
+import { CoachCard } from './components/CoachCard'
+import { useTutorialStore } from './stores/useTutorialStore'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from './components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './components/ui/select'
 import { ToastProvider, ToastViewport, Toast, ToastTitle, ToastDescription, ToastClose } from './components/ui/toast'
@@ -105,6 +107,17 @@ export default function App(): JSX.Element {
     })
     return () => { unsub() }
   }, [])
+
+  const tutorialActive = useTutorialStore(s => s.active)
+  const requestTutorial = useTutorialStore(s => s.request)
+
+  useEffect(() => {
+    if (setupComplete !== true || needsSeed !== false || tutorialActive) return
+    const seen = useTutorialStore.getState().isSeen
+    if (!seen('welcome')) { requestTutorial('welcome'); return }
+    if (leftTab === 'tree' && selectedNode && !seen('chat')) { requestTutorial('chat'); return }
+    if (!seen(leftTab)) { requestTutorial(leftTab) }
+  }, [setupComplete, needsSeed, tutorialActive, leftTab, selectedNode, requestTutorial])
 
   const handleSetupComplete = useCallback(async () => {
     setSetupComplete(true)
@@ -391,6 +404,8 @@ export default function App(): JSX.Element {
           <ToastClose />
         </Toast>
       ))}
+
+      <CoachCard />
     </ToastProvider>
   )
 }

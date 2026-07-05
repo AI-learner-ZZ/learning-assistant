@@ -5,16 +5,20 @@ import { Label } from './ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
 import { Separator } from './ui/separator'
 import { useSettingsStore } from '@/stores/useSettingsStore'
+import { useTutorialStore } from '@/stores/useTutorialStore'
 import { SearchSettings } from './SearchSettings'
-import { Database, Download, Trash2, Key, FolderOpen, Palette, Globe, Loader2, CheckCircle } from 'lucide-react'
+import { TutorialDialog } from './TutorialDialog'
+import { Database, Download, Trash2, Key, FolderOpen, Palette, Globe, Loader2, CheckCircle, GraduationCap, RotateCcw } from 'lucide-react'
 
 export function SettingsPage(): JSX.Element {
   const { settings, loadSettings, updateSetting } = useSettingsStore()
+  const replayTutorial = useTutorialStore(s => s.replay)
   const [apiKey, setApiKey] = useState('')
   const [showKey, setShowKey] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [exporting, setExporting] = useState(false)
+  const [guideOpen, setGuideOpen] = useState(false)
 
   const isZh = settings.language === 'zh'
   const t = (zh: string, en: string): string => isZh ? zh : en
@@ -183,6 +187,30 @@ export function SettingsPage(): JSX.Element {
           </Button>
         </div>
       </section>
+
+      <Separator className="my-6" />
+
+      <section className="space-y-4">
+        <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+          <GraduationCap className="h-4 w-4" />
+          {t('新手引导', 'Onboarding')}
+        </div>
+        <div className="space-y-3 pl-6">
+          <p className="text-xs text-muted-foreground">{t('回看每个页面的使用引导，或让引导在切换页面时重新弹出。', 'Review the guide for each page, or make the tips pop up again as you navigate.')}</p>
+          <div className="flex gap-2">
+            <Button variant="outline" className="flex-1 gap-2" onClick={() => setGuideOpen(true)}>
+              <GraduationCap className="h-4 w-4" />
+              {t('查看引导', 'View guides')}
+            </Button>
+            <Button variant="outline" className="flex-1 gap-2" onClick={replayTutorial}>
+              <RotateCcw className="h-4 w-4" />
+              {t('重新弹出引导', 'Show tips again')}
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      <TutorialDialog open={guideOpen} onClose={() => setGuideOpen(false)} />
     </div>
   )
 }
