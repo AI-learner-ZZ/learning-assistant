@@ -6,7 +6,7 @@
 
 技术栈：Electron + React + TypeScript。自带 OpenAI 兼容的 API Key（OpenAI、DeepSeek，或任意自定义 base URL）。
 
-### 🔴 [在线 UI 演示 →](https://your-github-username.github.io/learning-assistant/)
+### 🔴 [在线 UI 演示 →](https://ai-learner-zz.github.io/learning-assistant/)
 
 无需安装、无需 Key，直接在浏览器里点击体验真实界面。演示用的是**示例数据 + 脚本化的 AI 回复**（真实 AI 对话、文件解析、本地持久化仅桌面版可用）。要真正使用，请[下载桌面应用](#打包安装程序)并填入你自己的模型。
 
@@ -17,6 +17,8 @@
 ### 从源码安装并运行
 
 ```bash
+git clone https://github.com/AI-learner-ZZ/learning-assistant.git
+cd learning-assistant
 npm install
 npm run dev
 ```
@@ -35,6 +37,17 @@ npm run dev
 npm run build      # 编译 main + preload + renderer
 npm run package    # 在 dist/ 生成安装包（Windows .exe / macOS .dmg / Linux AppImage+deb）
 ```
+
+### 网页展示（GitHub Pages）
+
+同一套 React 界面可以打包成一个静态站点，在任意浏览器里配合模拟后端运行（`demo/mockApi.ts` 提供示例数据与脚本化的 AI 流式回复）：
+
+```bash
+npm run demo:dev     # 本地预览浏览器版演示
+npm run demo:build   # 输出静态站点到 demo-dist/
+```
+
+[.github/workflows/demo.yml](.github/workflows/demo.yml) 会在每次推送到 `main` 时自动部署到 GitHub Pages。只需启用一次：仓库 **Settings → Pages → Build and deployment → Source → 选择 "GitHub Actions"**。之后演示就会上线在 [ai-learner-zz.github.io/learning-assistant](https://ai-learner-zz.github.io/learning-assistant/)。（演示构建使用相对资源路径，因此在 `/learning-assistant/` 这个项目子路径下无需额外配置即可正常工作。）
 
 ---
 

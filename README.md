@@ -6,7 +6,7 @@ An offline-first, conversation-driven desktop companion for **deep, systematic s
 
 Built with Electron + React + TypeScript. Bring your own OpenAI-compatible API key (OpenAI, DeepSeek, or any custom base URL).
 
-### 🔴 [Live UI demo →](https://your-github-username.github.io/learning-assistant/)
+### 🔴 [Live UI demo →](https://ai-learner-zz.github.io/learning-assistant/)
 
 Click around the real interface right in your browser — no install, no key. The demo runs the actual UI with **sample data and scripted AI replies** (real AI, file parsing, and local persistence are desktop-only). To use it for real, [download the app](#build-a-distributable) and plug in your own model.
 
@@ -17,6 +17,8 @@ Click around the real interface right in your browser — no install, no key. Th
 ### Install & run from source
 
 ```bash
+git clone https://github.com/AI-learner-ZZ/learning-assistant.git
+cd learning-assistant
 npm install
 npm run dev
 ```
@@ -45,7 +47,7 @@ npm run demo:dev     # preview the browser demo locally
 npm run demo:build   # output a static site to demo-dist/
 ```
 
-[.github/workflows/demo.yml](.github/workflows/demo.yml) auto-deploys it to GitHub Pages on push to `main` (enable Pages → "GitHub Actions" in repo settings, and set your repo's `owner` in the demo link above).
+[.github/workflows/demo.yml](.github/workflows/demo.yml) auto-deploys it to GitHub Pages on every push to `main`. To enable it once: repo **Settings → Pages → Build and deployment → Source → "GitHub Actions"**. The demo then goes live at [ai-learner-zz.github.io/learning-assistant](https://ai-learner-zz.github.io/learning-assistant/). (The demo build uses a relative asset base, so it works under the `/learning-assistant/` project subpath with no extra config.)
 
 ---
 
