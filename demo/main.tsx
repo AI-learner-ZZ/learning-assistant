@@ -12,7 +12,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <App />
     <a
-      href="https://github.com/your-github-username/learning-assistant"
+      href="https://github.com/AI-learner-ZZ/learning-assistant"
       target="_blank"
       rel="noopener"
       className="fixed bottom-2 right-2 z-[999] text-[11px] px-2.5 py-1 rounded-full bg-primary text-primary-foreground shadow-md hover:opacity-90"
