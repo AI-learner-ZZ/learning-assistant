@@ -5,7 +5,9 @@ import { getPref, setPref } from './database'
 
 const SEARCH_KEY_FILE = (): string => path.join(app.getPath('userData'), 'search.enc')
 
-export type SearchProvider = 'serpapi' | 'bing' | 'searxng' | 'none'
+export type SearchProvider = 'free' | 'serpapi' | 'bing' | 'searxng' | 'none'
+
+const BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0 Safari/537.36'
 
 export interface SearchResult {
   title: string
@@ -56,6 +58,7 @@ export function getSearchKey(): string | null {
 export function isSearchConfigured(): boolean {
   const provider = getSearchProvider()
   if (provider === 'none') return false
+  if (provider === 'free') return true
   if (provider === 'searxng') return !!getSearxngUrl()
   return !!getSearchKey()
 }
@@ -63,6 +66,8 @@ export function isSearchConfigured(): boolean {
 export async function performSearch(query: string): Promise<SearchResult[]> {
   const provider = getSearchProvider()
   switch (provider) {
+    case 'free':
+      return searchFree(query)
     case 'serpapi':
       return searchSerpApi(query)
     case 'bing':
@@ -72,6 +77,92 @@ export async function performSearch(query: string): Promise<SearchResult[]> {
     default:
       throw new Error('Search not configured')
   }
+}
+
+function decodeEntities(s: string): string {
+  return s
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#x27;/g, "'")
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, ' ')
+}
+
+function stripHtml(s: string): string {
+  return decodeEntities(s.replace(/<[^>]*>/g, '')).replace(/\s+/g, ' ').trim()
+}
+
+function decodeDdgUrl(href: string): string {
+  const m = href.match(/[?&]uddg=([^&]+)/)
+  if (m) {
+    try {
+      return decodeURIComponent(m[1])
+    } catch {
+      return ''
+    }
+  }
+  if (href.startsWith('//')) return `https:${href}`
+  return href
+}
+
+async function searchDuckDuckGo(query: string): Promise<SearchResult[]> {
+  const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`
+  const res = await fetch(url, { headers: { 'User-Agent': BROWSER_UA, 'Accept-Language': 'en-US,en;q=0.9' } })
+  const html = await res.text()
+
+  const snippets: string[] = []
+  const snippetRe = /<a[^>]+class="[^"]*result__snippet[^"]*"[^>]*>([\s\S]*?)<\/a>/g
+  let sm: RegExpExecArray | null
+  while ((sm = snippetRe.exec(html)) !== null) snippets.push(stripHtml(sm[1]))
+
+  const links: { href: string; title: string }[] = []
+  const linkRe = /<a[^>]+class="[^"]*result__a[^"]*"[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/g
+  let lm: RegExpExecArray | null
+  while ((lm = linkRe.exec(html)) !== null) {
+    const href = decodeDdgUrl(lm[1])
+    const title = stripHtml(lm[2])
+    if (href && title) links.push({ href, title })
+  }
+
+  return links.slice(0, 5).map((l, i) => {
+    let source = l.href
+    try {
+      source = new URL(l.href).hostname
+    } catch {
+      source = l.href
+    }
+    return { title: l.title, snippet: snippets[i] ?? '', url: l.href, source }
+  })
+}
+
+async function searchWikipedia(query: string): Promise<SearchResult[]> {
+  const lang = /[一-鿿]/.test(query) ? 'zh' : 'en'
+  const url = `https://${lang}.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&srlimit=2&format=json&origin=*`
+  const res = await fetch(url, { headers: { 'User-Agent': BROWSER_UA } })
+  const data = (await res.json()) as { query?: { search?: { title: string; snippet: string }[] } }
+  return (data.query?.search ?? []).map(r => ({
+    title: r.title,
+    snippet: stripHtml(r.snippet),
+    url: `https://${lang}.wikipedia.org/wiki/${encodeURIComponent(r.title.replace(/ /g, '_'))}`,
+    source: `${lang}.wikipedia.org`
+  }))
+}
+
+async function searchFree(query: string): Promise<SearchResult[]> {
+  const [ddg, wiki] = await Promise.allSettled([searchDuckDuckGo(query), searchWikipedia(query)])
+  const merged: SearchResult[] = []
+  if (ddg.status === 'fulfilled') merged.push(...ddg.value)
+  if (wiki.status === 'fulfilled') merged.push(...wiki.value)
+  const seen = new Set<string>()
+  const deduped = merged.filter(r => {
+    if (!r.url || seen.has(r.url)) return false
+    seen.add(r.url)
+    return true
+  })
+  if (deduped.length === 0) throw new Error('Free search returned no results')
+  return deduped.slice(0, 5)
 }
 
 async function searchSerpApi(query: string): Promise<SearchResult[]> {

@@ -272,8 +272,8 @@ export const mockApi = {
   },
   search: {
     getConfig: () => Promise.resolve({ provider: 'none', searxngUrl: '', configured: false }),
-    setConfig: () => Promise.resolve(false),
-    test: () => Promise.resolve({ success: false })
+    setConfig: (cfg: { provider: string }) => Promise.resolve(cfg.provider !== 'none'),
+    test: () => delay(500).then(() => ({ success: true }))
   },
   summary: {
     generate: () => delay(600).then(() => '## 🌱 New Concepts\n- Gradient descent, learning rate\n## 🔗 Connections\nPairs with the loss function you learned earlier.\n## 🎯 Tomorrow\nApply it to linear regression.'),

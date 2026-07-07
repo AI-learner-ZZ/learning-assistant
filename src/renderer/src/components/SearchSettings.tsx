@@ -5,7 +5,7 @@ import { Label } from './ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
 import { Search, Loader2, CheckCircle, XCircle } from 'lucide-react'
 
-type Provider = 'none' | 'serpapi' | 'bing' | 'searxng'
+type Provider = 'none' | 'free' | 'serpapi' | 'bing' | 'searxng'
 
 export function SearchSettings({ isZh }: { isZh: boolean }): JSX.Element {
   const t = (zh: string, en: string): string => (isZh ? zh : en)
@@ -69,12 +69,19 @@ export function SearchSettings({ isZh }: { isZh: boolean }): JSX.Element {
             <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="none">{t('关闭', 'Off')}</SelectItem>
+              <SelectItem value="free">{t('免费（无需 Key）', 'Free (no key)')}</SelectItem>
               <SelectItem value="serpapi">SerpAPI</SelectItem>
               <SelectItem value="bing">Bing</SelectItem>
               <SelectItem value="searxng">SearXNG</SelectItem>
             </SelectContent>
           </Select>
         </div>
+
+        {provider === 'free' && (
+          <p className="text-xs text-muted-foreground rounded-md bg-muted/50 p-2">
+            {t('使用 DuckDuckGo + 维基百科，无需任何密钥，选择后点"保存"即可启用。结果质量与稳定性略逊于付费接口，且可能偶尔被限流。', 'Uses DuckDuckGo + Wikipedia with no key at all — just pick it and click Save. Quality and reliability are a bit below the paid APIs, and it may be rate-limited occasionally.')}
+          </p>
+        )}
 
         {provider === 'searxng' && (
           <div className="space-y-1.5">
