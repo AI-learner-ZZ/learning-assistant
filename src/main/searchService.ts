@@ -79,7 +79,7 @@ export async function performSearch(query: string): Promise<SearchResult[]> {
   }
 }
 
-function decodeEntities(s: string): string {
+export function decodeEntities(s: string): string {
   return s
     .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
@@ -90,11 +90,11 @@ function decodeEntities(s: string): string {
     .replace(/&nbsp;/g, ' ')
 }
 
-function stripHtml(s: string): string {
+export function stripHtml(s: string): string {
   return decodeEntities(s.replace(/<[^>]*>/g, '')).replace(/\s+/g, ' ').trim()
 }
 
-function decodeDdgUrl(href: string): string {
+export function decodeDdgUrl(href: string): string {
   const m = href.match(/[?&]uddg=([^&]+)/)
   if (m) {
     try {
@@ -107,11 +107,7 @@ function decodeDdgUrl(href: string): string {
   return href
 }
 
-async function searchDuckDuckGo(query: string): Promise<SearchResult[]> {
-  const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`
-  const res = await fetch(url, { headers: { 'User-Agent': BROWSER_UA, 'Accept-Language': 'en-US,en;q=0.9' } })
-  const html = await res.text()
-
+export function parseDuckDuckGoHtml(html: string): SearchResult[] {
   const snippets: string[] = []
   const snippetRe = /<a[^>]+class="[^"]*result__snippet[^"]*"[^>]*>([\s\S]*?)<\/a>/g
   let sm: RegExpExecArray | null
@@ -135,6 +131,12 @@ async function searchDuckDuckGo(query: string): Promise<SearchResult[]> {
     }
     return { title: l.title, snippet: snippets[i] ?? '', url: l.href, source }
   })
+}
+
+async function searchDuckDuckGo(query: string): Promise<SearchResult[]> {
+  const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`
+  const res = await fetch(url, { headers: { 'User-Agent': BROWSER_UA, 'Accept-Language': 'en-US,en;q=0.9' } })
+  return parseDuckDuckGoHtml(await res.text())
 }
 
 async function searchWikipedia(query: string): Promise<SearchResult[]> {

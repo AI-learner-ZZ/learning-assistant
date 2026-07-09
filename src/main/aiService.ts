@@ -465,6 +465,24 @@ export async function gradeChoice(
   return { correct, feedback }
 }
 
+export function extractJson<T>(raw: string, fallback: T): T {
+  if (!raw) return fallback
+  let text = raw.trim()
+  const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/i)
+  if (fence) text = fence[1].trim()
+  const start = text.search(/[{[]/)
+  if (start === -1) return fallback
+  const open = text[start]
+  const close = open === '{' ? '}' : ']'
+  const end = text.lastIndexOf(close)
+  if (end <= start) return fallback
+  try {
+    return JSON.parse(text.slice(start, end + 1)) as T
+  } catch {
+    return fallback
+  }
+}
+
 export interface GeneratedTreeNode {
   name: string
   description?: string
@@ -511,9 +529,7 @@ Return strict JSON only:
     max_tokens: 2000
   })
   const text = resp.choices[0].message.content || '{}'
-  const jsonMatch = text.match(/\{[\s\S]*\}/)
-  const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : { name: domain, description: '', nodes: [] }
-  return parsed
+  return extractJson(text, { name: domain, description: '', nodes: [] as GeneratedTreeNode[] })
 }
 
 export interface GeneratedProject {

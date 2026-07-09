@@ -18,14 +18,12 @@ function addDays(date: Date, days: number): string {
   return new Date(date.getTime() + days * DAY_MS).toISOString()
 }
 
-function correctRateToQuality(correctRate: number): number {
-
+export function correctRateToQuality(correctRate: number): number {
   return Math.round(Math.max(0, Math.min(5, correctRate * 5)))
 }
 
-export function recordReview(nodeId: string, correctRate: number): ReviewState {
-  const quality = correctRateToQuality(correctRate)
-  const prev = getReviewState(nodeId) ?? {
+export function defaultReviewState(nodeId: string): ReviewState {
+  return {
     node_id: nodeId,
     ease_factor: 2.5,
     interval_days: 0,
@@ -34,11 +32,13 @@ export function recordReview(nodeId: string, correctRate: number): ReviewState {
     last_reviewed_at: null,
     next_review_date: null
   }
+}
 
+export function computeNextState(prev: ReviewState, correctRate: number, now: Date = new Date()): ReviewState {
+  const quality = correctRateToQuality(correctRate)
   let { ease_factor, interval_days, repetitions } = prev
 
   if (quality < 3) {
-
     repetitions = 0
     interval_days = 1
   } else {
@@ -51,9 +51,8 @@ export function recordReview(nodeId: string, correctRate: number): ReviewState {
   ease_factor = ease_factor + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02))
   if (ease_factor < 1.3) ease_factor = 1.3
 
-  const now = new Date()
-  const updated: ReviewState = {
-    node_id: nodeId,
+  return {
+    node_id: prev.node_id,
     ease_factor: Number(ease_factor.toFixed(3)),
     interval_days,
     repetitions,
@@ -61,6 +60,11 @@ export function recordReview(nodeId: string, correctRate: number): ReviewState {
     last_reviewed_at: now.toISOString(),
     next_review_date: addDays(now, interval_days)
   }
+}
+
+export function recordReview(nodeId: string, correctRate: number): ReviewState {
+  const prev = getReviewState(nodeId) ?? defaultReviewState(nodeId)
+  const updated = computeNextState(prev, correctRate)
   upsertReviewState(updated)
   return updated
 }
