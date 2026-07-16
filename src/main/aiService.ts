@@ -47,6 +47,32 @@ const STYLE_INSTRUCTION_EN: Record<LectureStyle, string> = {
   analogy: 'Use the "analogy" style: explain concepts via analogies from a domain the user knows (fitness, cooking, games).'
 }
 
+export function buildLearnerContext(input: {
+  recentlyMastered?: string[]
+  strugglingWith?: string[]
+  streakDays?: number
+  language?: string
+}): string {
+  const isZh = (input.language || 'zh') === 'zh'
+  const parts: string[] = []
+  if (input.streakDays && input.streakDays > 1) {
+    parts.push(isZh ? `已连续学习 ${input.streakDays} 天` : `on a ${input.streakDays}-day learning streak`)
+  }
+  if (input.recentlyMastered?.length) {
+    const list = input.recentlyMastered.slice(0, 3).join(isZh ? '、' : ', ')
+    parts.push(isZh ? `最近掌握了：${list}` : `recently mastered: ${list}`)
+  }
+  if (input.strugglingWith?.length) {
+    const list = input.strugglingWith.slice(0, 3).join(isZh ? '、' : ', ')
+    parts.push(isZh ? `常在这些方面出错：${list}` : `tends to slip on: ${list}`)
+  }
+  if (parts.length === 0) return ''
+  const body = parts.join(isZh ? '；' : '; ')
+  return isZh
+    ? `【关于这位学习者】${body}。请自然地体现你记得他的历程：适时肯定进步、点名薄弱点，让他感到被记住、被鼓励。`
+    : `[ABOUT THIS LEARNER] ${body}. Naturally show you remember their journey: acknowledge progress, gently name weak spots, and make them feel remembered and encouraged.`
+}
+
 export function buildSystemPrompt(context: {
   nodeName?: string
   nodeDescription?: string
@@ -57,11 +83,13 @@ export function buildSystemPrompt(context: {
   difficulty?: string
   searchEnabled?: boolean
   mastery?: TeachingStance
+  learnerContext?: string
 }): string {
   const lang = context.language || 'zh'
   const isZh = lang === 'zh'
   const stance = context.mastery || 'learning'
   const stanceStr = (isZh ? STANCE_ZH : STANCE_EN)[stance]
+  const learnerStr = context.learnerContext ? `\n\n${context.learnerContext}` : ''
 
   const learnedStr = context.learnedNodes?.length
     ? (isZh ? `\n已掌握节点: ${context.learnedNodes.join('、')}` : `\nMastered: ${context.learnedNodes.join(', ')}`)
@@ -90,7 +118,7 @@ export function buildSystemPrompt(context: {
   if (isZh) {
     return `你是用户专属的自适应学习导师，精通认知科学与系统学习法。
 
-${stanceStr}
+${stanceStr}${learnerStr}
 
 【铁律】
 1. 教学姿态优先：严格遵循上面的【教学姿态】——对新手先直接把概念讲清楚、给示范例，别一上来就反问；对进阶者才用追问逼其推导。
@@ -119,7 +147,7 @@ ${stanceStr}
 
   return `You are the user's dedicated adaptive learning mentor, expert in cognitive science and systematic learning.
 
-${stanceStr}
+${stanceStr}${learnerStr}
 
 [RULES]
 1. Stance first: strictly follow the [TEACHING STANCE] above — for novices, explain clearly and give a worked example first (do NOT open with a probing question); only use Socratic questioning for advanced learners.

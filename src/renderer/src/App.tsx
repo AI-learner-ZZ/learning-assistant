@@ -12,6 +12,7 @@ import { FreeExplore } from './components/FreeExplore'
 import { ProjectWorkshop } from './components/ProjectWorkshop'
 import { DefenseMode } from './components/DefenseMode'
 import { CoachCard } from './components/CoachCard'
+import { HomePanel } from './components/HomePanel'
 import { useTutorialStore } from './stores/useTutorialStore'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from './components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './components/ui/select'
@@ -162,17 +163,26 @@ export default function App(): JSX.Element {
     }
   }, [addToast])
 
+  const handleOpenNodeById = useCallback((nodeId: string) => {
+    const node = useTreeStore.getState().nodes.find(n => n.id === nodeId)
+    if (node) {
+      setSelectedNode(node)
+      setNodeId(node.id)
+    } else {
+      setNodeId(nodeId)
+    }
+  }, [setNodeId])
+
   const handleTaskStart = useCallback((nodeId: string | null) => {
     if (!nodeId) return
-
-    setNodeId(nodeId)
+    handleOpenNodeById(nodeId)
     setLeftTab('tree')
-  }, [setNodeId])
+  }, [handleOpenNodeById])
 
   const handleReviewNode = useCallback((nodeId: string) => {
-    setNodeId(nodeId)
+    handleOpenNodeById(nodeId)
     setLeftTab('tree')
-  }, [setNodeId])
+  }, [handleOpenNodeById])
 
   if (setupComplete === null || (setupComplete && needsSeed === null)) {
     return (
@@ -305,12 +315,20 @@ export default function App(): JSX.Element {
                 <PanelLeftOpen className="h-4 w-4" />
               </button>
             )}
-            <ChatPanel
-              nodeId={selectedNode?.id || null}
-              nodeName={selectedNode?.name || null}
-              nodeDescription={selectedNode?.description || null}
-              headerInset={leftCollapsed}
-            />
+            {selectedNode ? (
+              <ChatPanel
+                nodeId={selectedNode.id}
+                nodeName={selectedNode.name}
+                nodeDescription={selectedNode.description}
+                headerInset={leftCollapsed}
+              />
+            ) : (
+              <HomePanel
+                onOpenNode={handleOpenNodeById}
+                onGoDaily={() => setLeftTab('daily')}
+                onOpenProject={() => setShowProject(true)}
+              />
+            )}
           </div>
         </div>
 

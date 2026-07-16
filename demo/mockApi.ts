@@ -242,6 +242,9 @@ export const mockApi = {
   learning: {
     complete: () => Promise.resolve({})
   },
+  streak: {
+    get: () => Promise.resolve({ count: 5, longest: 12, active: false, atRisk: true, broken: false, freezes: 2 })
+  },
   dashboard: {
     coverage: () => Promise.resolve({ total: 15, mastered: 6, learning: 3, percent: 40 }),
     risks: () => Promise.resolve([

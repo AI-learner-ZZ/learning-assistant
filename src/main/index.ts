@@ -1,11 +1,13 @@
-import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog, shell, Notification } from 'electron'
 import path from 'path'
-import { initDatabase, getNodes, getAllNodes, getNodeById, upsertNode, updateNodeStatus, deleteNode, updateNodeRelations, updateTaskStatus, saveMessage, getMessages, clearMessages, logError, getErrors, setPref, getPref, getTodayTasks, upsertSubject, getSubjects, deleteSubject, countSubjects, insertLearningRecord, getDailyAccuracy, resolveErrorsByType, createProject, getProjects, updateProjectStatus, createProjectStep, getProjectSteps, updateProjectStepStatus, getBottleneckCandidates, getStudyTimeDistribution, getAccuracyByHour, getReviewState, type KnowledgeNode } from './database'
+import { initDatabase, getNodes, getAllNodes, getNodeById, upsertNode, updateNodeStatus, deleteNode, updateNodeRelations, updateTaskStatus, saveMessage, getMessages, clearMessages, logError, getErrors, setPref, getPref, getTodayTasks, upsertSubject, getSubjects, deleteSubject, countSubjects, insertLearningRecord, getDailyAccuracy, resolveErrorsByType, createProject, getProjects, updateProjectStatus, createProjectStep, getProjectSteps, updateProjectStepStatus, getBottleneckCandidates, getStudyTimeDistribution, getAccuracyByHour, getReviewState, getUnresolvedErrorCounts, type KnowledgeNode } from './database'
 import { saveApiKey, getApiKey, setSetting, getSetting, getAllSettings, isSetupComplete } from './settings'
-import { streamChat, buildSystemPrompt, generateOutline, explainNodeNecessity, generateSummary, generateContrastWorkshop, gradeChoice, generateKnowledgeTree, generateProject, buildProjectStepPrompt, generateProjectReport, generateDefenseQuestions, gradeDefense, generateBottleneckReport, generateNodePrimer, curateResources, suggestResourceSearch, resetClient as resetAiClient, type LectureStyle, type TeachingStance, type ChatMessage } from './aiService'
+import { streamChat, buildSystemPrompt, buildLearnerContext, generateOutline, explainNodeNecessity, generateSummary, generateContrastWorkshop, gradeChoice, generateKnowledgeTree, generateProject, buildProjectStepPrompt, generateProjectReport, generateDefenseQuestions, gradeDefense, generateBottleneckReport, generateNodePrimer, curateResources, suggestResourceSearch, resetClient as resetAiClient, type LectureStyle, type TeachingStance, type ChatMessage } from './aiService'
 import { parseFile } from './fileParser'
 import { listTemplates, loadTemplate, createSubjectFromTree } from './templateLoader'
 import { recordReview, getHighRiskNodes } from './spacedRepetition'
+import { getStreak, recordActivity } from './streak'
+import { buildDailyNudge } from './nudge'
 import { generatePlan, applyTaskFeedback, getDifficultyLevel, difficultyDescriptor } from './dailyPlanner'
 import { getPendingContrast } from './errorAnalysis'
 import { detectBottlenecks } from './bottleneckDetector'
@@ -31,6 +33,24 @@ function nodeMastery(nodeId: string | null): TeachingStance {
 
 let mainWindow: BrowserWindow | null = null
 
+function maybeShowDailyNudge(): void {
+  try {
+    if (!Notification.isSupported()) return
+    const today = new Date().toISOString().slice(0, 10)
+    const streak = getStreak()
+    const nudge = buildDailyNudge({
+      dueCount: getHighRiskNodes(5, 3).length,
+      streakCount: streak.count,
+      streakAtRisk: streak.atRisk,
+      alreadyNudgedToday: getPref('last_nudge_date') === today,
+      language: getSetting('language')
+    })
+    if (!nudge) return
+    setPref('last_nudge_date', today)
+    new Notification({ title: nudge.title, body: nudge.body }).show()
+  } catch {  }
+}
+
 function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: 1400,
@@ -47,7 +67,10 @@ function createWindow(): void {
     }
   })
 
-  mainWindow.on('ready-to-show', () => mainWindow?.show())
+  mainWindow.on('ready-to-show', () => {
+    mainWindow?.show()
+    setTimeout(maybeShowDailyNudge, 4000)
+  })
 
   if (process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
@@ -239,13 +262,23 @@ function registerIpcHandlers(): void {
     const isZh = lang === 'zh'
     const lectureStyle = payload.lectureStyle || (getPref('lecture_style') as LectureStyle) || undefined
     const searchEnabled = isSearchConfigured()
+    const strugglingTypes = getUnresolvedErrorCounts()
+      .filter(c => !['无', 'None', ''].includes(c.error_type))
+      .map(c => c.error_type)
+    const learnerContext = buildLearnerContext({
+      recentlyMastered: getAllNodes().filter(n => n.status === 'mastered').map(n => n.name),
+      strugglingWith: strugglingTypes,
+      streakDays: getStreak().count,
+      language: lang
+    })
     const systemPrompt = buildSystemPrompt({
       ...payload.systemContext,
       language: lang,
       lectureStyle,
       difficulty: difficultyDescriptor(getDifficultyLevel(), isZh),
       searchEnabled,
-      mastery: nodeMastery(payload.nodeId)
+      mastery: nodeMastery(payload.nodeId),
+      learnerContext
     })
 
     const userMsg = payload.messages[payload.messages.length - 1]
@@ -366,6 +399,7 @@ function registerIpcHandlers(): void {
 
   ipcMain.handle('daily:update-task', (_, id: string, status: string, feedback?: string) => {
     updateTaskStatus(id, status, feedback)
+    if (status === 'done') recordActivity()
   })
 
   ipcMain.handle('daily:feedback', (_, taskId: string, feedback: 'too_hard' | 'too_easy' | 'not_interested') => {
@@ -384,8 +418,12 @@ function registerIpcHandlers(): void {
       duration_minutes: payload.durationMinutes,
       correct_rate: payload.correctRate
     })
-    return recordReview(payload.nodeId, payload.correctRate)
+    const review = recordReview(payload.nodeId, payload.correctRate)
+    recordActivity()
+    return review
   })
+
+  ipcMain.handle('streak:get', () => getStreak())
 
   ipcMain.handle('dashboard:coverage', (_, subjectId?: string) => {
     const nodes = subjectId ? getNodes(subjectId) : getAllNodes()

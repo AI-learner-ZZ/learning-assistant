@@ -131,6 +131,10 @@ const api = {
       ipcRenderer.invoke('learning:complete', payload)
   },
 
+  streak: {
+    get: () => ipcRenderer.invoke('streak:get')
+  },
+
   dashboard: {
     coverage: (subjectId?: string) => ipcRenderer.invoke('dashboard:coverage', subjectId),
     risks: () => ipcRenderer.invoke('dashboard:risks'),
