@@ -245,6 +245,57 @@ export const mockApi = {
   streak: {
     get: () => Promise.resolve({ count: 5, longest: 12, active: false, atRisk: true, broken: false, freezes: 2 })
   },
+  recap: {
+    get: () => Promise.resolve({
+      due: true,
+      recap: {
+        title: 'How far you came this week',
+        lines: [
+          'Lit up 3 new nodes: Linear Algebra, Python Programming, NumPy & Pandas',
+          '7 sessions, 210 minutes in total',
+          '78% average accuracy',
+          '5-day streak — keep it rolling 🔥'
+        ],
+        empty: false
+      }
+    }),
+    markShown: () => Promise.resolve()
+  },
+  warmup: {
+    generate: () => delay(700).then(() => [
+      {
+        question: 'Gradient descent updates parameters in which direction?',
+        options: ['Along the gradient', 'Opposite the gradient', 'Perpendicular to it', 'Randomly'],
+        correctIndex: 1,
+        nodeName: 'Gradient Descent'
+      },
+      {
+        question: 'A learning rate that is far too large usually causes what?',
+        options: ['Divergence / oscillation', 'Perfect convergence', 'Slower but safer descent', 'No effect'],
+        correctIndex: 0,
+        nodeName: 'Gradient Descent'
+      },
+      {
+        question: 'Which regularizer tends to drive weights exactly to zero?',
+        options: ['L2', 'L1', 'Dropout', 'BatchNorm'],
+        correctIndex: 1,
+        nodeName: 'Overfitting & Regularization'
+      },
+      {
+        question: 'In NumPy, what does broadcasting let you do?',
+        options: ['Send data over a network', 'Operate on arrays of different shapes', 'Compile to C', 'Shuffle rows'],
+        correctIndex: 1,
+        nodeName: 'NumPy & Pandas'
+      },
+      {
+        question: 'Matrix multiplication A(m×n)·B(n×p) yields a matrix of what shape?',
+        options: ['m×n', 'n×p', 'm×p', 'p×m'],
+        correctIndex: 2,
+        nodeName: 'Linear Algebra'
+      }
+    ]),
+    complete: () => Promise.resolve({ count: 6, longest: 12, active: true, atRisk: false, broken: false, freezes: 2 })
+  },
   dashboard: {
     coverage: () => Promise.resolve({ total: 15, mastered: 6, learning: 3, percent: 40 }),
     risks: () => Promise.resolve([

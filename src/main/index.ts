@@ -1,13 +1,14 @@
 import { app, BrowserWindow, ipcMain, dialog, shell, Notification } from 'electron'
 import path from 'path'
-import { initDatabase, getNodes, getAllNodes, getNodeById, upsertNode, updateNodeStatus, deleteNode, updateNodeRelations, updateTaskStatus, saveMessage, getMessages, clearMessages, logError, getErrors, setPref, getPref, getTodayTasks, upsertSubject, getSubjects, deleteSubject, countSubjects, insertLearningRecord, getDailyAccuracy, resolveErrorsByType, createProject, getProjects, updateProjectStatus, createProjectStep, getProjectSteps, updateProjectStepStatus, getBottleneckCandidates, getStudyTimeDistribution, getAccuracyByHour, getReviewState, getUnresolvedErrorCounts, type KnowledgeNode } from './database'
+import { initDatabase, getNodes, getAllNodes, getNodeById, upsertNode, updateNodeStatus, deleteNode, updateNodeRelations, updateTaskStatus, saveMessage, getMessages, clearMessages, logError, getErrors, setPref, getPref, getTodayTasks, upsertSubject, getSubjects, deleteSubject, countSubjects, insertLearningRecord, getDailyAccuracy, resolveErrorsByType, createProject, getProjects, updateProjectStatus, createProjectStep, getProjectSteps, updateProjectStepStatus, getBottleneckCandidates, getStudyTimeDistribution, getAccuracyByHour, getReviewState, getUnresolvedErrorCounts, getMasteredSince, getRecordsSince, type KnowledgeNode } from './database'
 import { saveApiKey, getApiKey, setSetting, getSetting, getAllSettings, isSetupComplete } from './settings'
-import { streamChat, buildSystemPrompt, buildLearnerContext, generateOutline, explainNodeNecessity, generateSummary, generateContrastWorkshop, gradeChoice, generateKnowledgeTree, generateProject, buildProjectStepPrompt, generateProjectReport, generateDefenseQuestions, gradeDefense, generateBottleneckReport, generateNodePrimer, curateResources, suggestResourceSearch, resetClient as resetAiClient, type LectureStyle, type TeachingStance, type ChatMessage } from './aiService'
+import { streamChat, buildSystemPrompt, buildLearnerContext, generateOutline, explainNodeNecessity, generateSummary, generateContrastWorkshop, gradeChoice, generateKnowledgeTree, generateProject, buildProjectStepPrompt, generateProjectReport, generateDefenseQuestions, gradeDefense, generateBottleneckReport, generateNodePrimer, generateWarmup, curateResources, suggestResourceSearch, resetClient as resetAiClient, type LectureStyle, type TeachingStance, type ChatMessage } from './aiService'
 import { parseFile } from './fileParser'
 import { listTemplates, loadTemplate, createSubjectFromTree } from './templateLoader'
 import { recordReview, getHighRiskNodes } from './spacedRepetition'
 import { getStreak, recordActivity } from './streak'
 import { buildDailyNudge } from './nudge'
+import { buildWeeklyRecap, shouldShowRecap, RECAP_INTERVAL_DAYS, type RecapStats } from './recap'
 import { generatePlan, applyTaskFeedback, getDifficultyLevel, difficultyDescriptor } from './dailyPlanner'
 import { getPendingContrast } from './errorAnalysis'
 import { detectBottlenecks } from './bottleneckDetector'
@@ -424,6 +425,34 @@ function registerIpcHandlers(): void {
   })
 
   ipcMain.handle('streak:get', () => getStreak())
+
+  ipcMain.handle('recap:get', () => {
+    const records = getRecordsSince(RECAP_INTERVAL_DAYS)
+    const stats: RecapStats = {
+      masteredNames: getMasteredSince(RECAP_INTERVAL_DAYS).map(n => n.name),
+      sessions: records.sessions,
+      minutes: Math.round(records.minutes),
+      accuracy: records.accuracy,
+      streakCount: getStreak().count
+    }
+    const today = new Date().toISOString().slice(0, 10)
+    const due = shouldShowRecap(getPref('last_recap_date'), today, stats)
+    return { due, recap: buildWeeklyRecap(stats, getSetting('language')) }
+  })
+
+  ipcMain.handle('recap:mark-shown', () => {
+    setPref('last_recap_date', new Date().toISOString().slice(0, 10))
+  })
+
+  ipcMain.handle('warmup:generate', async () => {
+    const studied = getAllNodes()
+      .filter(n => n.status === 'mastered' || n.status === 'learning')
+      .map(n => n.name)
+    if (studied.length === 0) return []
+    return generateWarmup(studied, getSetting('language'))
+  })
+
+  ipcMain.handle('warmup:complete', () => recordActivity())
 
   ipcMain.handle('dashboard:coverage', (_, subjectId?: string) => {
     const nodes = subjectId ? getNodes(subjectId) : getAllNodes()

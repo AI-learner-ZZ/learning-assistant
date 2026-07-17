@@ -102,19 +102,19 @@ export const GUIDES: Guide[] = [
   },
   {
     key: 'errors',
-    name: ['错误库', 'Error Log'],
+    name: ['攻克', 'Level Up'],
     tips: [
       {
-        title: ['自动记录错误', 'Errors logged automatically'],
-        body: ['追问答错时会自动记录并分类（概念混淆/计算/应用）。', 'Wrong answers are logged and typed automatically (concept / calculation / application).']
+        title: ['犯错=升级素材', 'Mistakes are fuel'],
+        body: ['答错会自动变成一个"攻克目标"并分类（概念混淆/计算/应用）。这里不是耻辱柱，是你的升级清单。', 'A wrong answer automatically becomes a target, typed by kind (concept / calculation / application). This is not a wall of shame — it is your level-up list.']
       },
       {
-        title: ['对比学习', 'Contrast learning'],
-        body: ['同类错误累计到阈值，会触发"对比学习工作坊"帮你辨析易混概念。', 'When one error type recurs enough, a Contrast-Learning workshop pops up to disambiguate confusable concepts.']
+        title: ['攻克进度条', 'Conquer progress'],
+        body: ['每类概念都有进度条，攒够次数就解锁"对比练习"帮你彻底拿下它。', 'Each concept has a progress bar; gather enough and you unlock a contrast drill to nail it for good.']
       },
       {
-        title: ['一键复习', 'One-click review'],
-        body: ['点每条错误的"复习"直接回到该节点巩固。', 'Click "Review" on any error to jump back to that node and reinforce it.']
+        title: ['一键攻克', 'Level it up'],
+        body: ['点任意目标的"攻克它"，直接回到该节点巩固。', 'Click "Level it up" on any target to jump back to that node and reinforce it.']
       }
     ]
   },

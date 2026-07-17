@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
-import { Flame, Play, RotateCcw, Sparkles, Trophy, CalendarDays, Loader2 } from 'lucide-react'
+import { Flame, Play, RotateCcw, Sparkles, Trophy, CalendarDays, Loader2, Brain, PartyPopper } from 'lucide-react'
 import { Button } from './ui/button'
+import { WarmupDialog } from './WarmupDialog'
 import { useTreeStore } from '@/stores/useTreeStore'
 import { useT } from '@/lib/i18n'
 import { pickNextAction, type DueReview, type NextAction } from '@/lib/nextAction'
@@ -11,6 +12,11 @@ interface StreakView {
   active: boolean
   atRisk: boolean
   broken: boolean
+}
+
+interface RecapPayload {
+  due: boolean
+  recap: { title: string; lines: string[]; empty: boolean }
 }
 
 interface HomePanelProps {
@@ -24,23 +30,33 @@ export function HomePanel({ onOpenNode, onGoDaily, onOpenProject }: HomePanelPro
   const nodes = useTreeStore(s => s.nodes)
   const [streak, setStreak] = useState<StreakView | null>(null)
   const [due, setDue] = useState<DueReview[]>([])
+  const [recap, setRecap] = useState<RecapPayload | null>(null)
+  const [recapDismissed, setRecapDismissed] = useState(false)
+  const [warmupOpen, setWarmupOpen] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let alive = true
     const load = async (): Promise<void> => {
-      const [s, risks] = await Promise.all([
+      const [s, risks, r] = await Promise.all([
         window.api.streak.get() as Promise<StreakView>,
-        window.api.dashboard.risks() as Promise<DueReview[]>
+        window.api.dashboard.risks() as Promise<DueReview[]>,
+        window.api.recap.get() as Promise<RecapPayload>
       ])
       if (!alive) return
       setStreak(s)
       setDue(risks)
+      setRecap(r)
       setLoading(false)
     }
     load()
     return () => { alive = false }
   }, [nodes])
+
+  const dismissRecap = (): void => {
+    window.api.recap.markShown()
+    setRecapDismissed(true)
+  }
 
   const action = pickNextAction(nodes, due)
 
@@ -48,6 +64,24 @@ export function HomePanel({ onOpenNode, onGoDaily, onOpenProject }: HomePanelPro
     return (
       <div className="h-full flex items-center justify-center">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
+  if (recap && recap.due && !recap.recap.empty && !recapDismissed) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center gap-5 px-8 text-center">
+        <PartyPopper className="h-12 w-12 text-primary" />
+        <h2 className="text-xl font-semibold">{recap.recap.title}</h2>
+        <ul className="space-y-2 text-sm text-muted-foreground max-w-sm">
+          {recap.recap.lines.map((line, i) => (
+            <li key={i} className="flex items-start gap-2 text-left">
+              <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+              {line}
+            </li>
+          ))}
+        </ul>
+        <Button size="lg" onClick={dismissRecap}>{t('收下，继续学习', 'Nice — keep learning')}</Button>
       </div>
     )
   }
@@ -70,13 +104,24 @@ export function HomePanel({ onOpenNode, onGoDaily, onOpenProject }: HomePanelPro
 
       <ActionCard action={action} isZh={isZh} onOpenNode={onOpenNode} onOpenProject={onOpenProject} />
 
-      <button
-        onClick={onGoDaily}
-        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-      >
-        <CalendarDays className="h-3.5 w-3.5" />
-        {t('查看今日课表', "View today's plan")}
-      </button>
+      <div className="flex items-center gap-4">
+        <button
+          onClick={() => setWarmupOpen(true)}
+          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <Brain className="h-3.5 w-3.5" />
+          {t('60 秒热身', '60s warm-up')}
+        </button>
+        <button
+          onClick={onGoDaily}
+          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <CalendarDays className="h-3.5 w-3.5" />
+          {t('查看今日课表', "View today's plan")}
+        </button>
+      </div>
+
+      <WarmupDialog open={warmupOpen} onClose={() => setWarmupOpen(false)} />
     </div>
   )
 }

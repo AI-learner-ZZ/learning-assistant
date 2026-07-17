@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from 'vitest'
 vi.mock('electron', () => ({ BrowserWindow: class {} }))
 vi.mock('./settings', () => ({ getApiKey: vi.fn(() => 'k'), getSetting: vi.fn(() => '') }))
 
-import { buildSystemPrompt, buildLearnerContext, extractJson, type GeneratedTreeNode } from './aiService'
+import { buildSystemPrompt, buildLearnerContext, extractJson, parseWarmupQuestions, type GeneratedTreeNode } from './aiService'
 
 describe('buildSystemPrompt', () => {
   it('injects the novice stance and direct-instruction guidance', () => {
@@ -99,5 +99,44 @@ describe('extractJson', () => {
 
   it('returns the fallback for empty input', () => {
     expect(extractJson('', fallback)).toBe(fallback)
+  })
+})
+
+describe('parseWarmupQuestions', () => {
+  const valid = { question: 'Q1?', options: ['a', 'b', 'c', 'd'], correctIndex: 2, nodeName: 'Topic' }
+
+  it('parses a fenced JSON array of questions', () => {
+    const out = parseWarmupQuestions('```json\n' + JSON.stringify([valid]) + '\n```')
+    expect(out).toHaveLength(1)
+    expect(out[0]).toMatchObject({ question: 'Q1?', correctIndex: 2 })
+  })
+
+  it('drops entries with an out-of-range correctIndex', () => {
+    expect(parseWarmupQuestions(JSON.stringify([{ ...valid, correctIndex: 9 }]))).toEqual([])
+    expect(parseWarmupQuestions(JSON.stringify([{ ...valid, correctIndex: -1 }]))).toEqual([])
+  })
+
+  it('drops entries missing options or a question', () => {
+    expect(parseWarmupQuestions(JSON.stringify([{ ...valid, options: ['only'] }]))).toEqual([])
+    expect(parseWarmupQuestions(JSON.stringify([{ ...valid, question: '' }]))).toEqual([])
+  })
+
+  it('keeps valid entries and discards invalid ones in the same batch', () => {
+    const out = parseWarmupQuestions(JSON.stringify([valid, { ...valid, correctIndex: 99 }]))
+    expect(out).toHaveLength(1)
+  })
+
+  it('defaults a missing nodeName to an empty string', () => {
+    const out = parseWarmupQuestions(JSON.stringify([{ question: 'Q', options: ['a', 'b'], correctIndex: 0 }]))
+    expect(out[0].nodeName).toBe('')
+  })
+
+  it('returns an empty list for non-array or invalid JSON', () => {
+    expect(parseWarmupQuestions('{"not":"an array"}')).toEqual([])
+    expect(parseWarmupQuestions('garbage')).toEqual([])
+  })
+
+  it('caps the batch at 8 questions', () => {
+    expect(parseWarmupQuestions(JSON.stringify(Array.from({ length: 12 }, () => valid)))).toHaveLength(8)
   })
 })

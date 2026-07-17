@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useTreeStore, type TreeNode } from './useTreeStore'
+import { useCelebrationStore } from './useCelebrationStore'
 
 function node(id: string, status: TreeNode['status']): TreeNode {
   return {
@@ -23,6 +24,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   ;(window as unknown as { api: unknown }).api = { tree: { updateStatus } }
   useTreeStore.setState({ subjects: [], nodes: [], currentSubjectId: null, selectedNodeId: null })
+  useCelebrationStore.setState({ current: null })
 })
 
 describe('selectNode', () => {
@@ -58,6 +60,27 @@ describe('updateNodeStatus', () => {
     const updated = useTreeStore.getState().nodes[0]
     expect(updated.status).toBe('mastered')
     expect(updated.progress).toBe(100)
+  })
+})
+
+describe('mastery celebration', () => {
+  it('celebrates when a node first becomes mastered', async () => {
+    useTreeStore.setState({ nodes: [node('a', 'learning'), node('b', 'mastered')] })
+    await useTreeStore.getState().updateNodeStatus('a', 'mastered')
+    const current = useCelebrationStore.getState().current
+    expect(current).toMatchObject({ nodeId: 'a', nodeName: 'Node a', masteredCount: 2, totalCount: 2 })
+  })
+
+  it('does not celebrate a node that was already mastered', async () => {
+    useTreeStore.setState({ nodes: [node('a', 'mastered')] })
+    await useTreeStore.getState().updateNodeStatus('a', 'mastered')
+    expect(useCelebrationStore.getState().current).toBeNull()
+  })
+
+  it('does not celebrate other status changes', async () => {
+    useTreeStore.setState({ nodes: [node('a', 'unlocked')] })
+    await useTreeStore.getState().updateNodeStatus('a', 'learning')
+    expect(useCelebrationStore.getState().current).toBeNull()
   })
 })
 

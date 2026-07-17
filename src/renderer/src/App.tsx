@@ -12,6 +12,7 @@ import { FreeExplore } from './components/FreeExplore'
 import { ProjectWorkshop } from './components/ProjectWorkshop'
 import { DefenseMode } from './components/DefenseMode'
 import { CoachCard } from './components/CoachCard'
+import { CelebrationOverlay } from './components/CelebrationOverlay'
 import { HomePanel } from './components/HomePanel'
 import { useTutorialStore } from './stores/useTutorialStore'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from './components/ui/tabs'
@@ -21,7 +22,7 @@ import { useSettingsStore } from './stores/useSettingsStore'
 import { useTreeStore, TreeNode } from './stores/useTreeStore'
 import { useChatStore } from './stores/useChatStore'
 import { Separator } from './components/ui/separator'
-import { BookOpen, CalendarDays, AlertTriangle, Settings, Loader2, LayoutDashboard, Scale, Compass, Plus, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { BookOpen, CalendarDays, Swords, Settings, Loader2, LayoutDashboard, Scale, Compass, Plus, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { cn } from './lib/utils'
 
 interface ToastMessage {
@@ -251,8 +252,8 @@ export default function App(): JSX.Element {
                     {isZh ? '仪表盘' : 'Stats'}
                   </TabsTrigger>
                   <TabsTrigger value="errors" className="flex-1 gap-1 text-xs px-1">
-                    <AlertTriangle className="h-3.5 w-3.5" />
-                    {isZh ? '错误' : 'Errors'}
+                    <Swords className="h-3.5 w-3.5" />
+                    {isZh ? '攻克' : 'Level'}
                   </TabsTrigger>
                   <TabsTrigger value="settings" className="flex-1 gap-1 text-xs px-1">
                     <Settings className="h-3.5 w-3.5" />
@@ -354,14 +355,14 @@ export default function App(): JSX.Element {
             <Scale className="h-4 w-4" />
             <span>
               {isZh
-                ? `你在「${contrastBanner.errorType}」上反复出错，来做个对比练习吧`
-                : `Repeated "${contrastBanner.errorType}" errors — try a contrast exercise`}
+                ? `「${contrastBanner.errorType}」攒够素材了，来一场对比练习升级它`
+                : `You've gathered enough on "${contrastBanner.errorType}" — a contrast drill will level it up`}
             </span>
             <button
               className="bg-white/20 hover:bg-white/30 rounded-full px-3 py-0.5 text-xs font-medium"
               onClick={() => { setContrastError(contrastBanner.errorType) }}
             >
-              {isZh ? '开始' : 'Start'}
+              {isZh ? '升级' : 'Level up'}
             </button>
             <button className="hover:opacity-70" onClick={() => setContrastBanner(null)}>✕</button>
           </div>
@@ -423,6 +424,7 @@ export default function App(): JSX.Element {
         </Toast>
       ))}
 
+      <CelebrationOverlay />
       <CoachCard />
     </ToastProvider>
   )

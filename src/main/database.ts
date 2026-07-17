@@ -493,6 +493,27 @@ export function getLatestRecordPerNode(): {
   `) as { node_id: string; session_date: string; correct_rate: number; last_reviewed_at: string; review_count: number }[]
 }
 
+export function getMasteredSince(days: number): { id: string; name: string }[] {
+  return getDb().all(
+    `SELECT id, name FROM knowledge_tree
+     WHERE status = 'mastered' AND updated_at >= datetime('now', ?)
+     ORDER BY updated_at DESC`,
+    [`-${days} days`]
+  ) as { id: string; name: string }[]
+}
+
+export function getRecordsSince(days: number): { sessions: number; minutes: number; accuracy: number } {
+  const row = getDb().get(
+    `SELECT COUNT(*) as sessions,
+            COALESCE(SUM(duration_minutes), 0) as minutes,
+            COALESCE(AVG(correct_rate), 0) as accuracy
+     FROM learning_records
+     WHERE created_at >= datetime('now', ?)`,
+    [`-${days} days`]
+  ) as { sessions: number; minutes: number; accuracy: number } | undefined
+  return row ?? { sessions: 0, minutes: 0, accuracy: 0 }
+}
+
 export function getDailyAccuracy(days: number): { day: string; accuracy: number; count: number }[] {
   return getDb().all(`
     SELECT session_date as day,

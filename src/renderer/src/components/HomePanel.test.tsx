@@ -21,10 +21,16 @@ function node(id: string, status: TreeNode['status'], parent_id: string | null =
   }
 }
 
-function mockApi(streak: unknown, risks: unknown): void {
+const markShown = vi.fn()
+
+const NO_RECAP = { due: false, recap: { title: '', lines: [], empty: true } }
+
+function mockApi(streak: unknown, risks: unknown, recap: unknown = NO_RECAP): void {
   ;(window as unknown as { api: unknown }).api = {
     streak: { get: vi.fn().mockResolvedValue(streak) },
-    dashboard: { risks: vi.fn().mockResolvedValue(risks) }
+    dashboard: { risks: vi.fn().mockResolvedValue(risks) },
+    recap: { get: vi.fn().mockResolvedValue(recap), markShown },
+    warmup: { generate: vi.fn().mockResolvedValue([]), complete: vi.fn() }
   }
 }
 
@@ -67,5 +73,31 @@ describe('HomePanel', () => {
 
     await userEvent.click(await screen.findByRole('button', { name: /Open Project Workshop/ }))
     expect(onOpenProject).toHaveBeenCalled()
+  })
+
+  it('shows the weekly recap when due and marks it shown on dismiss', async () => {
+    mockApi(
+      { count: 3, longest: 3, active: true, atRisk: false, broken: false },
+      [],
+      { due: true, recap: { title: 'How far you came this week', lines: ['Lit up 2 new nodes'], empty: false } }
+    )
+    useTreeStore.setState({ nodes: [node('a', 'unlocked')] })
+    render(<HomePanel onOpenNode={() => {}} onGoDaily={() => {}} onOpenProject={() => {}} />)
+
+    expect(await screen.findByText('How far you came this week')).toBeInTheDocument()
+    expect(screen.getByText('Lit up 2 new nodes')).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: /keep learning/ }))
+    expect(markShown).toHaveBeenCalled()
+    expect(await screen.findByRole('button', { name: /Start learning/ })).toBeInTheDocument()
+  })
+
+  it('does not show the recap when it is not due', async () => {
+    mockApi({ count: 0, longest: 0, active: false, atRisk: false, broken: false }, [])
+    useTreeStore.setState({ nodes: [node('a', 'unlocked')] })
+    render(<HomePanel onOpenNode={() => {}} onGoDaily={() => {}} onOpenProject={() => {}} />)
+
+    expect(await screen.findByRole('button', { name: /Start learning/ })).toBeInTheDocument()
+    expect(screen.queryByText(/How far you came/)).not.toBeInTheDocument()
   })
 })

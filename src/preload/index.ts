@@ -135,6 +135,16 @@ const api = {
     get: () => ipcRenderer.invoke('streak:get')
   },
 
+  recap: {
+    get: () => ipcRenderer.invoke('recap:get'),
+    markShown: () => ipcRenderer.invoke('recap:mark-shown')
+  },
+
+  warmup: {
+    generate: () => ipcRenderer.invoke('warmup:generate'),
+    complete: () => ipcRenderer.invoke('warmup:complete')
+  },
+
   dashboard: {
     coverage: (subjectId?: string) => ipcRenderer.invoke('dashboard:coverage', subjectId),
     risks: () => ipcRenderer.invoke('dashboard:risks'),

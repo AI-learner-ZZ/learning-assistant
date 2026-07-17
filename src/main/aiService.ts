@@ -511,6 +511,60 @@ export function extractJson<T>(raw: string, fallback: T): T {
   }
 }
 
+export interface WarmupQuestion {
+  question: string
+  options: string[]
+  correctIndex: number
+  nodeName: string
+}
+
+export function parseWarmupQuestions(raw: string): WarmupQuestion[] {
+  const parsed = extractJson<unknown>(raw, [])
+  if (!Array.isArray(parsed)) return []
+  return parsed
+    .filter((item): item is WarmupQuestion => {
+      const q = item as WarmupQuestion
+      return (
+        !!q &&
+        typeof q.question === 'string' &&
+        q.question.trim().length > 0 &&
+        Array.isArray(q.options) &&
+        q.options.length >= 2 &&
+        q.options.every(o => typeof o === 'string') &&
+        typeof q.correctIndex === 'number' &&
+        Number.isInteger(q.correctIndex) &&
+        q.correctIndex >= 0 &&
+        q.correctIndex < q.options.length
+      )
+    })
+    .map(q => ({ ...q, nodeName: typeof q.nodeName === 'string' ? q.nodeName : '' }))
+    .slice(0, 8)
+}
+
+export async function generateWarmup(nodeNames: string[], language: string): Promise<WarmupQuestion[]> {
+  if (nodeNames.length === 0) return []
+  const openai = getClient()
+  const isZh = language === 'zh'
+  const list = nodeNames.slice(0, 12).join(isZh ? '、' : ', ')
+  const prompt = isZh
+    ? `学习者已经学过这些知识点：${list}。
+出 5 道"快速回忆"单选题，用于 60 秒热身。要求：每题 10 秒内能答完、聚焦核心概念的主动回忆、四个选项且只有一个正确、干扰项要合理但明确错误。
+严格以 JSON 数组返回，不要任何其他文字：
+[{"question":"题干","options":["A","B","C","D"],"correctIndex":0,"nodeName":"对应知识点"}]`
+    : `The learner has studied these topics: ${list}.
+Write 5 rapid-recall multiple-choice questions for a 60-second warm-up. Requirements: answerable in under 10 seconds, focused on active recall of core concepts, exactly four options with only one correct, distractors plausible but clearly wrong.
+Return a strict JSON array only, no other text:
+[{"question":"...","options":["A","B","C","D"],"correctIndex":0,"nodeName":"topic"}]`
+
+  const resp = await openai.chat.completions.create({
+    model: chatModel(),
+    messages: [{ role: 'user', content: prompt }],
+    temperature: 0.6,
+    max_tokens: 1200
+  })
+  return parseWarmupQuestions(resp.choices[0].message.content || '[]')
+}
+
 export interface GeneratedTreeNode {
   name: string
   description?: string

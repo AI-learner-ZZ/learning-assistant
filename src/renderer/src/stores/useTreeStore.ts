@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { useCelebrationStore } from './useCelebrationStore'
 
 export interface Subject {
   id: string
@@ -86,12 +87,22 @@ export const useTreeStore = create<TreeStore>((set, get) => ({
   },
 
   updateNodeStatus: async (id, status, progress) => {
+    const prev = get().nodes.find(n => n.id === id)
     await window.api.tree.updateStatus(id, status, progress)
     set(state => ({
       nodes: state.nodes.map(n =>
         n.id === id ? { ...n, status: status as TreeNode['status'], progress: progress ?? n.progress } : n
       )
     }))
+    if (status === 'mastered' && prev && prev.status !== 'mastered') {
+      const nodes = get().nodes
+      useCelebrationStore.getState().celebrate({
+        nodeId: id,
+        nodeName: prev.name,
+        masteredCount: nodes.filter(n => n.status === 'mastered').length,
+        totalCount: nodes.length
+      })
+    }
   },
 
   getLearnedNodeNames: () => {
