@@ -145,6 +145,10 @@ const api = {
     complete: () => ipcRenderer.invoke('warmup:complete')
   },
 
+  spark: {
+    get: () => ipcRenderer.invoke('spark:get')
+  },
+
   dashboard: {
     coverage: (subjectId?: string) => ipcRenderer.invoke('dashboard:coverage', subjectId),
     risks: () => ipcRenderer.invoke('dashboard:risks'),

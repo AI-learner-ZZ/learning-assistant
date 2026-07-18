@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react'
-import { Flame, Play, RotateCcw, Sparkles, Trophy, CalendarDays, Loader2, Brain, PartyPopper } from 'lucide-react'
+import { Flame, Play, RotateCcw, Sparkles, Trophy, CalendarDays, Loader2, Brain, PartyPopper, Target, Lightbulb, X } from 'lucide-react'
 import { Button } from './ui/button'
 import { WarmupDialog } from './WarmupDialog'
+import { GoalDialog } from './GoalDialog'
 import { useTreeStore } from '@/stores/useTreeStore'
 import { useT } from '@/lib/i18n'
 import { pickNextAction, type DueReview, type NextAction } from '@/lib/nextAction'
+import { goalProgress, goalMessage } from '@/lib/goal'
 
 interface StreakView {
   count: number
@@ -28,36 +30,54 @@ interface HomePanelProps {
 export function HomePanel({ onOpenNode, onGoDaily, onOpenProject }: HomePanelProps): JSX.Element {
   const { t, isZh } = useT()
   const nodes = useTreeStore(s => s.nodes)
+  const subjectId = useTreeStore(s => s.currentSubjectId)
   const [streak, setStreak] = useState<StreakView | null>(null)
   const [due, setDue] = useState<DueReview[]>([])
   const [recap, setRecap] = useState<RecapPayload | null>(null)
   const [recapDismissed, setRecapDismissed] = useState(false)
   const [warmupOpen, setWarmupOpen] = useState(false)
+  const [goal, setGoal] = useState('')
+  const [goalOpen, setGoalOpen] = useState(false)
+  const [spark, setSpark] = useState('')
+  const [sparkDismissed, setSparkDismissed] = useState(false)
   const [loading, setLoading] = useState(true)
+
+  const goalKey = subjectId ? `goal:${subjectId}` : null
 
   useEffect(() => {
     let alive = true
     const load = async (): Promise<void> => {
-      const [s, risks, r] = await Promise.all([
+      const [s, risks, r, g, sp] = await Promise.all([
         window.api.streak.get() as Promise<StreakView>,
         window.api.dashboard.risks() as Promise<DueReview[]>,
-        window.api.recap.get() as Promise<RecapPayload>
+        window.api.recap.get() as Promise<RecapPayload>,
+        goalKey ? (window.api.pref.get(goalKey) as Promise<string | null>) : Promise.resolve(null),
+        window.api.spark.get() as Promise<{ text: string }>
       ])
       if (!alive) return
       setStreak(s)
       setDue(risks)
       setRecap(r)
+      setGoal(g ?? '')
+      setSpark(sp?.text ?? '')
       setLoading(false)
     }
     load()
     return () => { alive = false }
-  }, [nodes])
+  }, [nodes, goalKey])
 
   const dismissRecap = (): void => {
     window.api.recap.markShown()
     setRecapDismissed(true)
   }
 
+  const saveGoal = (text: string): void => {
+    setGoal(text)
+    if (goalKey) window.api.pref.set(goalKey, text)
+  }
+
+  const mastered = nodes.filter(n => n.status === 'mastered').length
+  const progress = goalProgress(mastered, nodes.length)
   const action = pickNextAction(nodes, due)
 
   if (loading) {
@@ -88,6 +108,36 @@ export function HomePanel({ onOpenNode, onGoDaily, onOpenProject }: HomePanelPro
 
   return (
     <div className="h-full flex flex-col items-center justify-center gap-6 px-8 text-center">
+      {nodes.length > 0 && (
+        goal ? (
+          <button
+            onClick={() => setGoalOpen(true)}
+            className="w-full max-w-sm rounded-xl border bg-card p-3 text-left transition-colors hover:bg-accent/40"
+          >
+            <div className="flex items-center gap-1.5 text-xs font-medium text-primary mb-1.5">
+              <Target className="h-3.5 w-3.5" />
+              {t('北极星目标', 'North Star')}
+            </div>
+            <p className="text-sm font-medium">{goal}</p>
+            <div className="mt-2 flex items-center gap-2">
+              <div className="h-1.5 flex-1 rounded-full bg-muted overflow-hidden">
+                <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${progress.percent}%` }} />
+              </div>
+              <span className="text-xs font-semibold text-primary">{progress.percent}%</span>
+            </div>
+            <p className="mt-1.5 text-xs text-muted-foreground">{goalMessage(progress.percent, isZh)}</p>
+          </button>
+        ) : (
+          <button
+            onClick={() => setGoalOpen(true)}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <Target className="h-3.5 w-3.5" />
+            {t('设定学习目标', 'Set a learning goal')}
+          </button>
+        )
+      )}
+
       {streak && streak.count > 0 && (
         <div className="flex flex-col items-center gap-1">
           <div className="flex items-center gap-2 text-2xl font-bold text-orange-500">
@@ -103,6 +153,23 @@ export function HomePanel({ onOpenNode, onGoDaily, onOpenProject }: HomePanelPro
       )}
 
       <ActionCard action={action} isZh={isZh} onOpenNode={onOpenNode} onOpenProject={onOpenProject} />
+
+      {spark && !sparkDismissed && (
+        <div className="relative w-full max-w-sm rounded-xl border border-amber-300/50 bg-amber-50 dark:bg-amber-950/40 p-3 text-left">
+          <button
+            className="absolute top-2 right-2 text-muted-foreground hover:text-foreground"
+            onClick={() => setSparkDismissed(true)}
+            title={t('关闭', 'Dismiss')}
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+          <div className="flex items-center gap-1.5 text-xs font-medium text-amber-600 dark:text-amber-400 mb-1">
+            <Lightbulb className="h-3.5 w-3.5" />
+            {t('你知道吗', 'Did you know?')}
+          </div>
+          <p className="text-sm text-foreground/90 pr-4">{spark}</p>
+        </div>
+      )}
 
       <div className="flex items-center gap-4">
         <button
@@ -122,6 +189,7 @@ export function HomePanel({ onOpenNode, onGoDaily, onOpenProject }: HomePanelPro
       </div>
 
       <WarmupDialog open={warmupOpen} onClose={() => setWarmupOpen(false)} />
+      <GoalDialog open={goalOpen} initialValue={goal} onClose={() => setGoalOpen(false)} onSave={saveGoal} />
     </div>
   )
 }

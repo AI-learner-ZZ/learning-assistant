@@ -1,6 +1,7 @@
 import OpenAI from 'openai'
 import { BrowserWindow } from 'electron'
 import { getApiKey, getSetting } from './settings'
+import { parseSpark } from './spark'
 
 let client: OpenAI | null = null
 
@@ -563,6 +564,28 @@ Return a strict JSON array only, no other text:
     max_tokens: 1200
   })
   return parseWarmupQuestions(resp.choices[0].message.content || '[]')
+}
+
+export async function generateSpark(learnedNodes: string[], language: string): Promise<string> {
+  if (learnedNodes.length < 2) return ''
+  const openai = getClient()
+  const isZh = language === 'zh'
+  const list = learnedNodes.slice(0, 15).join(isZh ? '、' : ', ')
+  const prompt = isZh
+    ? `学习者最近学过这些知识点：${list}。
+用一句让人"原来如此/没想到"的话，点出其中两个概念之间的意外联系，或一个反直觉的小事实，用来激发好奇心。
+要求：像朋友闲聊，具体、有画面感，不超过 40 字，只输出这一句，不要引号、不要前缀。`
+    : `The learner recently studied: ${list}.
+In ONE surprising sentence, reveal an unexpected connection between two of these concepts, or a counter-intuitive fact, to spark curiosity.
+Requirements: conversational and concrete, under 30 words, output only the sentence — no quotes, no prefix.`
+
+  const resp = await openai.chat.completions.create({
+    model: chatModel(),
+    messages: [{ role: 'user', content: prompt }],
+    temperature: 0.9,
+    max_tokens: 120
+  })
+  return parseSpark(resp.choices[0].message.content || '')
 }
 
 export interface GeneratedTreeNode {

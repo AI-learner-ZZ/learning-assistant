@@ -22,21 +22,31 @@ function node(id: string, status: TreeNode['status'], parent_id: string | null =
 }
 
 const markShown = vi.fn()
+const prefSet = vi.fn()
 
 const NO_RECAP = { due: false, recap: { title: '', lines: [], empty: true } }
 
-function mockApi(streak: unknown, risks: unknown, recap: unknown = NO_RECAP): void {
+interface MockOpts {
+  recap?: unknown
+  goal?: string | null
+  spark?: string
+}
+
+function mockApi(streak: unknown, risks: unknown, opts: MockOpts = {}): void {
   ;(window as unknown as { api: unknown }).api = {
     streak: { get: vi.fn().mockResolvedValue(streak) },
     dashboard: { risks: vi.fn().mockResolvedValue(risks) },
-    recap: { get: vi.fn().mockResolvedValue(recap), markShown },
-    warmup: { generate: vi.fn().mockResolvedValue([]), complete: vi.fn() }
+    recap: { get: vi.fn().mockResolvedValue(opts.recap ?? NO_RECAP), markShown },
+    warmup: { generate: vi.fn().mockResolvedValue([]), complete: vi.fn() },
+    spark: { get: vi.fn().mockResolvedValue({ text: opts.spark ?? '' }) },
+    pref: { get: vi.fn().mockResolvedValue(opts.goal ?? null), set: prefSet }
   }
 }
 
 beforeEach(() => {
+  vi.clearAllMocks()
   useSettingsStore.setState(s => ({ settings: { ...s.settings, language: 'en' } }))
-  useTreeStore.setState({ nodes: [] })
+  useTreeStore.setState({ nodes: [], currentSubjectId: 's1' })
 })
 
 describe('HomePanel', () => {
@@ -79,7 +89,7 @@ describe('HomePanel', () => {
     mockApi(
       { count: 3, longest: 3, active: true, atRisk: false, broken: false },
       [],
-      { due: true, recap: { title: 'How far you came this week', lines: ['Lit up 2 new nodes'], empty: false } }
+      { recap: { due: true, recap: { title: 'How far you came this week', lines: ['Lit up 2 new nodes'], empty: false } } }
     )
     useTreeStore.setState({ nodes: [node('a', 'unlocked')] })
     render(<HomePanel onOpenNode={() => {}} onGoDaily={() => {}} onOpenProject={() => {}} />)
@@ -99,5 +109,40 @@ describe('HomePanel', () => {
 
     expect(await screen.findByRole('button', { name: /Start learning/ })).toBeInTheDocument()
     expect(screen.queryByText(/How far you came/)).not.toBeInTheDocument()
+  })
+
+  it('shows the North Star goal with progress toward it', async () => {
+    mockApi(
+      { count: 0, longest: 0, active: false, atRisk: false, broken: false },
+      [],
+      { goal: 'Build a recommender system' }
+    )
+    useTreeStore.setState({ nodes: [node('a', 'mastered'), node('b', 'unlocked'), node('c', 'unlocked'), node('d', 'unlocked')] })
+    render(<HomePanel onOpenNode={() => {}} onGoDaily={() => {}} onOpenProject={() => {}} />)
+
+    expect(await screen.findByText('Build a recommender system')).toBeInTheDocument()
+    expect(screen.getByText('25%')).toBeInTheDocument()
+  })
+
+  it('lets the user set a goal when none exists', async () => {
+    mockApi({ count: 0, longest: 0, active: false, atRisk: false, broken: false }, [], { goal: null })
+    useTreeStore.setState({ nodes: [node('a', 'unlocked')] })
+    render(<HomePanel onOpenNode={() => {}} onGoDaily={() => {}} onOpenProject={() => {}} />)
+
+    expect(await screen.findByRole('button', { name: /Set a learning goal/ })).toBeInTheDocument()
+  })
+
+  it('shows a curiosity spark and can dismiss it', async () => {
+    mockApi(
+      { count: 0, longest: 0, active: false, atRisk: false, broken: false },
+      [],
+      { spark: 'Entropy in decision trees is the same idea that limits every zip file.' }
+    )
+    useTreeStore.setState({ nodes: [node('a', 'unlocked')] })
+    render(<HomePanel onOpenNode={() => {}} onGoDaily={() => {}} onOpenProject={() => {}} />)
+
+    expect(await screen.findByText(/limits every zip file/)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /Dismiss/ }))
+    expect(screen.queryByText(/limits every zip file/)).not.toBeInTheDocument()
   })
 })

@@ -126,6 +126,8 @@ function scriptedAnswer(): string {
   ].join('\n')
 }
 
+const PREFS: Record<string, string> = {}
+
 export const mockApi = {
   settings: {
     getAll: () => Promise.resolve({ language: 'en', theme: 'light', apiProvider: 'openai', apiBaseUrl: '', dataDir: '', setupComplete: true }),
@@ -247,7 +249,7 @@ export const mockApi = {
   },
   recap: {
     get: () => Promise.resolve({
-      due: true,
+      due: false,
       recap: {
         title: 'How far you came this week',
         lines: [
@@ -357,8 +359,13 @@ export const mockApi = {
     openExternal: (url: string) => { window.open(url, '_blank', 'noopener'); return Promise.resolve() }
   },
   pref: {
-    get: () => Promise.resolve(null),
-    set: () => Promise.resolve()
+    get: (key: string) => Promise.resolve(PREFS[key] ?? (key.startsWith('goal:') ? 'Build a recommender system on my own' : null)),
+    set: (key: string, value: string) => { PREFS[key] = value; return Promise.resolve() }
+  },
+  spark: {
+    get: () => delay(400).then(() => ({
+      text: 'The "entropy" you met in decision trees is the same idea that sets the limit of every zip file.'
+    }))
   },
   app: {
     getVersion: () => Promise.resolve('demo')
