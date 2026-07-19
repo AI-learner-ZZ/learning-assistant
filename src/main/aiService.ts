@@ -19,6 +19,67 @@ export function resetClient(): void {
   client = null
 }
 
+const EMBEDDING_MODEL = 'text-embedding-3-small'
+
+export async function embedTexts(texts: string[]): Promise<number[][]> {
+  if (texts.length === 0) return []
+  const openai = getClient()
+  const resp = await openai.embeddings.create({ model: EMBEDDING_MODEL, input: texts })
+  return resp.data.map(d => d.embedding as number[])
+}
+
+export interface MaterialSuggestion {
+  title: string
+  url: string
+  why: string
+  kind: string
+}
+
+export function parseMaterials(raw: string): MaterialSuggestion[] {
+  const parsed = extractJson<unknown>(raw, [])
+  if (!Array.isArray(parsed)) return []
+  return parsed
+    .filter((item): item is MaterialSuggestion => {
+      const m = item as MaterialSuggestion
+      return !!m && typeof m.title === 'string' && m.title.trim().length > 0 && typeof m.url === 'string' && m.url.trim().length > 0
+    })
+    .map(m => ({
+      title: m.title.trim(),
+      url: m.url.trim(),
+      why: typeof m.why === 'string' ? m.why : '',
+      kind: typeof m.kind === 'string' ? m.kind : 'doc'
+    }))
+    .slice(0, 12)
+}
+
+export async function suggestMaterials(
+  subjectName: string,
+  language: string,
+  searchResults: { title: string; url: string }[] = []
+): Promise<MaterialSuggestion[]> {
+  const openai = getClient()
+  const isZh = language === 'zh'
+  const refs = searchResults.length
+    ? (isZh ? '\n可参考这些真实链接（优先用真实存在的 URL）：\n' : '\nReal links you may reuse (prefer URLs that actually exist):\n') +
+      searchResults.slice(0, 8).map(r => `- ${r.title} ${r.url}`).join('\n')
+    : ''
+  const prompt = isZh
+    ? `学习者想系统学习「${subjectName}」。推荐 5-8 份高质量、权威、稳定的学习材料（官方文档、经典教材、优质教程、练习来源）。${refs}
+严格以 JSON 数组返回，不要其他文字：
+[{"title":"名称","url":"链接","why":"一句话为什么推荐","kind":"doc|book|tutorial|practice"}]`
+    : `The learner wants to systematically learn "${subjectName}". Recommend 5-8 high-quality, authoritative, stable study materials (official docs, classic textbooks, strong tutorials, practice sources).${refs}
+Return a strict JSON array only, no other text:
+[{"title":"...","url":"...","why":"one-line reason","kind":"doc|book|tutorial|practice"}]`
+
+  const resp = await openai.chat.completions.create({
+    model: chatModel(),
+    messages: [{ role: 'user', content: prompt }],
+    temperature: 0.5,
+    max_tokens: 900
+  })
+  return parseMaterials(resp.choices[0].message.content || '[]')
+}
+
 function chatModel(): string {
   return getSetting('apiProvider') === 'deepseek' ? 'deepseek-chat' : 'gpt-4o-mini'
 }
@@ -85,12 +146,14 @@ export function buildSystemPrompt(context: {
   searchEnabled?: boolean
   mastery?: TeachingStance
   learnerContext?: string
+  retrievedContext?: string
 }): string {
   const lang = context.language || 'zh'
   const isZh = lang === 'zh'
   const stance = context.mastery || 'learning'
   const stanceStr = (isZh ? STANCE_ZH : STANCE_EN)[stance]
   const learnerStr = context.learnerContext ? `\n\n${context.learnerContext}` : ''
+  const retrievedStr = context.retrievedContext ? `\n\n${context.retrievedContext}` : ''
 
   const learnedStr = context.learnedNodes?.length
     ? (isZh ? `\n已掌握节点: ${context.learnedNodes.join('、')}` : `\nMastered: ${context.learnedNodes.join(', ')}`)
@@ -141,7 +204,7 @@ ${stanceStr}${learnerStr}
 - 对比、参数、优劣用 Markdown 表格。
 - 数学公式用 KaTeX：行内 $...$，独立公式 $$...$$。
 
-【当前学习上下文】${nodeCtx}${learnedStr}${weakStr}${styleStr}${difficultyStr}
+【当前学习上下文】${nodeCtx}${learnedStr}${weakStr}${styleStr}${difficultyStr}${retrievedStr}
 
 记住：对新手先讲清楚、打好地基，对进阶者才逼他思考——始终温暖、有耐心。`
   }
@@ -170,7 +233,7 @@ ${stanceStr}${learnerStr}
 - Comparisons, parameters, pros/cons as Markdown tables.
 - Math in KaTeX: inline $...$, display $$...$$.
 
-[CURRENT CONTEXT]${nodeCtx}${learnedStr}${weakStr}${styleStr}${difficultyStr}
+[CURRENT CONTEXT]${nodeCtx}${learnedStr}${weakStr}${styleStr}${difficultyStr}${retrievedStr}
 
 Remember: for novices, explain clearly and build the foundation first; only push advanced learners to think — always warm and patient.`
 }
@@ -542,17 +605,20 @@ export function parseWarmupQuestions(raw: string): WarmupQuestion[] {
     .slice(0, 8)
 }
 
-export async function generateWarmup(nodeNames: string[], language: string): Promise<WarmupQuestion[]> {
+export async function generateWarmup(nodeNames: string[], language: string, grounding: string[] = []): Promise<WarmupQuestion[]> {
   if (nodeNames.length === 0) return []
   const openai = getClient()
   const isZh = language === 'zh'
   const list = nodeNames.slice(0, 12).join(isZh ? '、' : ', ')
+  const groundStr = grounding.length
+    ? (isZh ? `\n请优先依据学习者自己的材料出题（只考材料里出现过的内容）：\n${grounding.join('\n')}` : `\nGround the questions in the learner's own materials (only test what appears in them):\n${grounding.join('\n')}`)
+    : ''
   const prompt = isZh
-    ? `学习者已经学过这些知识点：${list}。
+    ? `学习者已经学过这些知识点：${list}。${groundStr}
 出 5 道"快速回忆"单选题，用于 60 秒热身。要求：每题 10 秒内能答完、聚焦核心概念的主动回忆、四个选项且只有一个正确、干扰项要合理但明确错误。
 严格以 JSON 数组返回，不要任何其他文字：
 [{"question":"题干","options":["A","B","C","D"],"correctIndex":0,"nodeName":"对应知识点"}]`
-    : `The learner has studied these topics: ${list}.
+    : `The learner has studied these topics: ${list}.${groundStr}
 Write 5 rapid-recall multiple-choice questions for a 60-second warm-up. Requirements: answerable in under 10 seconds, focused on active recall of core concepts, exactly four options with only one correct, distractors plausible but clearly wrong.
 Return a strict JSON array only, no other text:
 [{"question":"...","options":["A","B","C","D"],"correctIndex":0,"nodeName":"topic"}]`
@@ -596,12 +662,19 @@ export interface GeneratedTreeNode {
 
 export async function generateKnowledgeTree(
   domain: string,
-  language: string
+  language: string,
+  digest = ''
 ): Promise<{ name: string; description: string; nodes: GeneratedTreeNode[] }> {
   const openai = getClient()
   const isZh = language === 'zh'
+  const digestZh = digest
+    ? `\n请【严格基于学习者提供的以下材料目录】来组织这棵树，让节点尽量对应材料真实覆盖的主题，不要凭空添加材料未涉及的大块内容：\n${digest}\n`
+    : ''
+  const digestEn = digest
+    ? `\nOrganize the tree [strictly around the learner's own materials below]; make nodes correspond to topics the materials actually cover, and do not invent large areas the materials never mention:\n${digest}\n`
+    : ''
   const prompt = isZh
-    ? `你是一位资深大学教授。为"零基础学习者"设计《${domain}》的系统化学习知识树，目标是达到大学本科毕业生水平。
+    ? `你是一位资深大学教授。为"零基础学习者"设计《${domain}》的系统化学习知识树，目标是达到大学本科毕业生水平。${digestZh}
 要求：6-8个主分支（核心能力），每个主分支下2-4个子节点，体现由浅入深的依赖关系。
 严格以JSON返回，不要加其他文字：
 {
@@ -614,7 +687,7 @@ export async function generateKnowledgeTree(
     ]}
   ]
 }`
-    : `You are a senior university professor. Design a systematic knowledge tree for learning "${domain}" from zero to an undergraduate-graduate level.
+    : `You are a senior university professor. Design a systematic knowledge tree for learning "${domain}" from zero to an undergraduate-graduate level.${digestEn}
 Requirements: 6-8 main branches (core competencies), each with 2-4 child nodes, reflecting a shallow-to-deep dependency order.
 Return strict JSON only:
 {
@@ -713,14 +786,18 @@ Generate a "Project Completion Report" (Markdown) with: ## 🎉 Summary, ## 💪
 export async function generateDefenseQuestions(
   subjectName: string,
   masteredNodes: string[],
-  language: string
+  language: string,
+  grounding: string[] = []
 ): Promise<string[]> {
   const openai = getClient()
   const isZh = language === 'zh'
+  const groundStr = grounding.length
+    ? (isZh ? `\n尽量围绕学习者自己的材料出题：\n${grounding.join('\n')}` : `\nCentre the questions on the learner's own materials:\n${grounding.join('\n')}`)
+    : ''
   const prompt = isZh
-    ? `你是一位严格但不带恶意的答辩评审。学生学习《${subjectName}》，已掌握：${masteredNodes.slice(0, 12).join('、') || '基础内容'}。
+    ? `你是一位严格但不带恶意的答辩评审。学生学习《${subjectName}》，已掌握：${masteredNodes.slice(0, 12).join('、') || '基础内容'}。${groundStr}
 出3道"场景应用题"，要求学生综合运用知识、讲解完整思路（而非选择题）。严格以JSON数组返回：["题目1","题目2","题目3"]`
-    : `You are a strict but fair defense reviewer. The student studied "${subjectName}", mastering: ${masteredNodes.slice(0, 12).join(', ') || 'basics'}.
+    : `You are a strict but fair defense reviewer. The student studied "${subjectName}", mastering: ${masteredNodes.slice(0, 12).join(', ') || 'basics'}.${groundStr}
 Pose 3 scenario application questions requiring full reasoning (not multiple choice). Return strict JSON array: ["q1","q2","q3"]`
   const resp = await openai.chat.completions.create({
     model: chatModel(),
@@ -743,13 +820,17 @@ export interface DefenseReport {
 export async function gradeDefense(
   question: string,
   answer: string,
-  language: string
+  language: string,
+  grounding: string[] = []
 ): Promise<DefenseReport> {
   const openai = getClient()
   const isZh = language === 'zh'
+  const groundStr = grounding.length
+    ? (isZh ? `\n请依据学习者自己的材料判断概念准确性（材料未覆盖处不要武断扣分）：\n${grounding.join('\n')}` : `\nJudge concept accuracy against the learner's own materials (do not penalize harshly for things the materials never cover):\n${grounding.join('\n')}`)
+    : ''
   const prompt = isZh
     ? `答辩题：${question}
-学生的回答：${answer}
+学生的回答：${answer}${groundStr}
 
 作为评审，评估其"思维完整性"。严格以JSON返回：
 {
@@ -760,7 +841,7 @@ export async function gradeDefense(
   "overall": "总体评语与改进建议（100字内）"
 }`
     : `Defense question: ${question}
-Student answer: ${answer}
+Student answer: ${answer}${groundStr}
 
 As a reviewer, assess "thinking completeness". Return strict JSON:
 {

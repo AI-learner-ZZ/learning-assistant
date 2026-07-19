@@ -85,7 +85,7 @@ export function DefenseMode({ open, subjectId, subjectName, onClose }: DefenseMo
     if (!answer.trim()) return
     setGrading(true)
     try {
-      const r = await window.api.defense.grade({ question: questions[idx], answer }) as DefenseReport
+      const r = await window.api.defense.grade({ question: questions[idx], answer, subjectId: subjectId ?? undefined }) as DefenseReport
       setReport(r)
     } finally {
       setGrading(false)

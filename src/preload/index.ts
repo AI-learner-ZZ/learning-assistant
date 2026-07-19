@@ -49,7 +49,7 @@ const api = {
 
   defense: {
     questions: (subjectId: string) => ipcRenderer.invoke('defense:questions', subjectId),
-    grade: (payload: { question: string; answer: string }) => ipcRenderer.invoke('defense:grade', payload),
+    grade: (payload: { question: string; answer: string; subjectId?: string }) => ipcRenderer.invoke('defense:grade', payload),
     export: (payload: { content: string }) => ipcRenderer.invoke('defense:export', payload)
   },
 
@@ -83,6 +83,20 @@ const api = {
 
   resources: {
     find: (nodeName: string) => ipcRenderer.invoke('resources:find', nodeName)
+  },
+
+  material: {
+    suggest: (subjectName: string) => ipcRenderer.invoke('material:suggest', subjectName),
+    fetch: (payload: { subjectId: string; url: string }) => ipcRenderer.invoke('material:fetch', payload)
+  },
+
+  rag: {
+    ingest: (payload: { subjectId: string; kind: string; title: string; origin: string | null; text: string }) =>
+      ipcRenderer.invoke('rag:ingest', payload),
+    list: (subjectId: string) => ipcRenderer.invoke('rag:list', subjectId),
+    delete: (sourceId: string) => ipcRenderer.invoke('rag:delete', sourceId),
+    autoFetchEnabled: () => ipcRenderer.invoke('rag:auto-fetch-enabled'),
+    treeFromMaterials: (subjectId: string) => ipcRenderer.invoke('tree:from-materials', subjectId)
   },
 
   chat: {

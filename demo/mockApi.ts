@@ -128,6 +128,22 @@ function scriptedAnswer(): string {
 
 const PREFS: Record<string, string> = {}
 
+interface DemoSource {
+  id: string
+  subject_id: string
+  kind: string
+  title: string
+  origin: string | null
+  status: string
+  chunk_count: number
+  token_estimate: number
+  created_at: string
+}
+
+const SOURCES: DemoSource[] = [
+  { id: 'src-demo', subject_id: SUBJECT.id, kind: 'pdf', title: 'Deep Learning (Goodfellow) — ch.6', origin: 'deeplearningbook.org', status: 'ingested', chunk_count: 24, token_estimate: 28000, created_at: '' }
+]
+
 export const mockApi = {
   settings: {
     getAll: () => Promise.resolve({ language: 'en', theme: 'light', apiProvider: 'openai', apiBaseUrl: '', dataDir: '', setupComplete: true }),
@@ -366,6 +382,31 @@ export const mockApi = {
     get: () => delay(400).then(() => ({
       text: 'The "entropy" you met in decision trees is the same idea that sets the limit of every zip file.'
     }))
+  },
+  material: {
+    fetch: (p: { url: string }) => delay(800).then(() => {
+      const id = Math.random().toString(36).slice(2)
+      SOURCES.unshift({ id, subject_id: SUBJECT.id, kind: 'url', title: p.url, origin: p.url, status: 'ingested', chunk_count: 6, token_estimate: 4200, created_at: '' })
+      return { enabled: true, sourceId: id, chunks: 6, title: p.url }
+    }),
+    suggest: () => delay(700).then(() => [
+      { title: 'Official documentation', url: 'https://example.com/docs', why: 'The authoritative reference — always current.', kind: 'doc' },
+      { title: 'A well-regarded textbook (PDF)', url: 'https://example.com/book.pdf', why: 'Builds the concepts from the ground up.', kind: 'book' },
+      { title: 'Hands-on tutorial series', url: 'https://example.com/tutorial', why: 'Learn by doing, with worked examples.', kind: 'tutorial' },
+      { title: 'Practice question bank', url: 'https://example.com/practice', why: 'Test yourself with realistic scenarios.', kind: 'practice' }
+    ])
+  },
+  rag: {
+    ingest: (p: { title: string; text: string }) => delay(500).then(() => {
+      const id = Math.random().toString(36).slice(2)
+      const chunks = Math.max(1, Math.round(p.text.length / 1200))
+      SOURCES.unshift({ id, subject_id: SUBJECT.id, kind: 'txt', title: p.title, origin: null, status: 'ingested', chunk_count: chunks, token_estimate: Math.round(p.text.length / 4), created_at: '' })
+      return { sourceId: id, chunks }
+    }),
+    list: () => Promise.resolve(SOURCES),
+    delete: (id: string) => { const i = SOURCES.findIndex(s => s.id === id); if (i >= 0) SOURCES.splice(i, 1); return Promise.resolve({ success: true }) },
+    autoFetchEnabled: () => Promise.resolve(PREFS['auto_fetch_enabled'] === '1'),
+    treeFromMaterials: () => delay(900).then(() => ({ success: true, nodes: 18 }))
   },
   app: {
     getVersion: () => Promise.resolve('demo')

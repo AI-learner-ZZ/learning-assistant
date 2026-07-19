@@ -2,7 +2,7 @@ import path from 'path'
 import fs from 'fs'
 import { randomUUID } from 'crypto'
 import { app } from 'electron'
-import { upsertSubject, upsertNode } from './database'
+import { upsertSubject, upsertNode, deleteSubjectNodes } from './database'
 
 interface TemplateNode {
   id?: string
@@ -117,4 +117,13 @@ export function createSubjectFromTree(
     upsertNode(node)
   }
   return subjectId
+}
+
+export function replaceSubjectTree(subjectId: string, nodes: TemplateNode[]): number {
+  deleteSubjectNodes(subjectId)
+  const flat = flattenNodes(nodes, subjectId)
+  for (const node of flat) {
+    upsertNode(node)
+  }
+  return flat.length
 }

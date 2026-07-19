@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Label } from './ui/label'
@@ -8,7 +8,7 @@ import { useSettingsStore } from '@/stores/useSettingsStore'
 import { useTutorialStore } from '@/stores/useTutorialStore'
 import { SearchSettings } from './SearchSettings'
 import { TutorialDialog } from './TutorialDialog'
-import { Database, Download, Trash2, Key, FolderOpen, Palette, Globe, Loader2, CheckCircle, GraduationCap, RotateCcw } from 'lucide-react'
+import { Database, Download, Trash2, Key, FolderOpen, Palette, Globe, Loader2, CheckCircle, GraduationCap, RotateCcw, DownloadCloud } from 'lucide-react'
 
 export function SettingsPage(): JSX.Element {
   const { settings, loadSettings, updateSetting } = useSettingsStore()
@@ -19,6 +19,17 @@ export function SettingsPage(): JSX.Element {
   const [saved, setSaved] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [guideOpen, setGuideOpen] = useState(false)
+  const [autoFetch, setAutoFetch] = useState(false)
+
+  useEffect(() => {
+    window.api.pref.get('auto_fetch_enabled').then(v => setAutoFetch(v === '1'))
+  }, [])
+
+  const toggleAutoFetch = async (): Promise<void> => {
+    const next = !autoFetch
+    setAutoFetch(next)
+    await window.api.pref.set('auto_fetch_enabled', next ? '1' : '0')
+  }
 
   const isZh = settings.language === 'zh'
   const t = (zh: string, en: string): string => isZh ? zh : en
@@ -205,6 +216,28 @@ export function SettingsPage(): JSX.Element {
             <Button variant="outline" className="flex-1 gap-2" onClick={replayTutorial}>
               <RotateCcw className="h-4 w-4" />
               {t('重新弹出引导', 'Show tips again')}
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      <Separator className="my-6" />
+
+      <section className="space-y-4">
+        <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+          <DownloadCloud className="h-4 w-4" />
+          {t('专家模式（实验）', 'Expert Mode (experimental)')}
+        </div>
+        <div className="space-y-3 pl-6">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <Label className="text-sm">{t('允许自动抓取网页', 'Allow automatic web fetching')}</Label>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {t('开启后，可在"教材库"里让程序直接抓取 AI 推荐链接的正文并入库；默认关闭，此时只会打开链接由你手动保存。仅抓取你点击的链接，会屏蔽内网地址。', 'When on, the Materials panel can fetch the body text of AI-recommended links directly. Off by default — links just open for you to save manually. Only fetches links you click; private addresses are blocked.')}
+              </p>
+            </div>
+            <Button variant={autoFetch ? 'default' : 'outline'} size="sm" className="shrink-0 w-16" onClick={toggleAutoFetch}>
+              {autoFetch ? t('已开启', 'On') : t('已关闭', 'Off')}
             </Button>
           </div>
         </div>

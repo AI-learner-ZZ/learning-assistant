@@ -14,6 +14,7 @@ import { DefenseMode } from './components/DefenseMode'
 import { CoachCard } from './components/CoachCard'
 import { CelebrationOverlay } from './components/CelebrationOverlay'
 import { HomePanel } from './components/HomePanel'
+import { MaterialsDialog } from './components/MaterialsDialog'
 import { useTutorialStore } from './stores/useTutorialStore'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from './components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './components/ui/select'
@@ -22,7 +23,7 @@ import { useSettingsStore } from './stores/useSettingsStore'
 import { useTreeStore, TreeNode } from './stores/useTreeStore'
 import { useChatStore } from './stores/useChatStore'
 import { Separator } from './components/ui/separator'
-import { BookOpen, CalendarDays, Swords, Settings, Loader2, LayoutDashboard, Scale, Compass, Plus, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { BookOpen, CalendarDays, Swords, Settings, Loader2, LayoutDashboard, Scale, Compass, Plus, PanelLeftClose, PanelLeftOpen, Library } from 'lucide-react'
 import { cn } from './lib/utils'
 
 interface ToastMessage {
@@ -45,6 +46,7 @@ export default function App(): JSX.Element {
   const [showFreeExplore, setShowFreeExplore] = useState(false)
   const [showProject, setShowProject] = useState(false)
   const [showDefense, setShowDefense] = useState(false)
+  const [showMaterials, setShowMaterials] = useState(false)
 
   const [leftWidth, setLeftWidth] = useState(() => Number(localStorage.getItem('leftWidth')) || 384)
   const [leftCollapsed, setLeftCollapsed] = useState(() => localStorage.getItem('leftCollapsed') === '1')
@@ -285,10 +287,17 @@ export default function App(): JSX.Element {
               </div>
             </Tabs>
 
-            <div className="border-t shrink-0 p-2">
+            <div className="border-t shrink-0 p-2 flex gap-1">
+              <button
+                onClick={() => setShowMaterials(true)}
+                className="flex-1 flex items-center justify-center gap-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-accent rounded-md py-1.5 transition-colors"
+              >
+                <Library className="h-3.5 w-3.5" />
+                {isZh ? '教材库' : 'Materials'}
+              </button>
               <button
                 onClick={() => setShowFreeExplore(true)}
-                className="w-full flex items-center justify-center gap-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-accent rounded-md py-1.5 transition-colors"
+                className="flex-1 flex items-center justify-center gap-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-accent rounded-md py-1.5 transition-colors"
               >
                 <Compass className="h-3.5 w-3.5" />
                 {isZh ? '自由探索' : 'Free Explore'}
@@ -393,6 +402,17 @@ export default function App(): JSX.Element {
         subjectId={currentSubjectId}
         subjectName={subjects.find(s => s.id === currentSubjectId)?.name || ''}
         onClose={() => setShowDefense(false)}
+      />
+
+      <MaterialsDialog
+        open={showMaterials}
+        subjectId={currentSubjectId}
+        subjectName={subjects.find(s => s.id === currentSubjectId)?.name || ''}
+        onClose={() => setShowMaterials(false)}
+        onTreeRegenerated={() => {
+          handleClearSelection()
+          if (currentSubjectId) selectSubject(currentSubjectId)
+        }}
       />
 
       {addingSubject && (

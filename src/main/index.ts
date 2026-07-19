@@ -2,10 +2,13 @@ import { app, BrowserWindow, ipcMain, dialog, shell, Notification } from 'electr
 import path from 'path'
 import { initDatabase, getNodes, getAllNodes, getNodeById, upsertNode, updateNodeStatus, deleteNode, updateNodeRelations, updateTaskStatus, saveMessage, getMessages, clearMessages, logError, getErrors, setPref, getPref, getTodayTasks, upsertSubject, getSubjects, deleteSubject, countSubjects, insertLearningRecord, getDailyAccuracy, resolveErrorsByType, createProject, getProjects, updateProjectStatus, createProjectStep, getProjectSteps, updateProjectStepStatus, getBottleneckCandidates, getStudyTimeDistribution, getAccuracyByHour, getReviewState, getUnresolvedErrorCounts, getMasteredSince, getRecordsSince, type KnowledgeNode } from './database'
 import { saveApiKey, getApiKey, setSetting, getSetting, getAllSettings, isSetupComplete } from './settings'
-import { streamChat, buildSystemPrompt, buildLearnerContext, generateOutline, explainNodeNecessity, generateSummary, generateContrastWorkshop, gradeChoice, generateKnowledgeTree, generateProject, buildProjectStepPrompt, generateProjectReport, generateDefenseQuestions, gradeDefense, generateBottleneckReport, generateNodePrimer, generateWarmup, generateSpark, curateResources, suggestResourceSearch, resetClient as resetAiClient, type LectureStyle, type TeachingStance, type ChatMessage } from './aiService'
+import { streamChat, buildSystemPrompt, buildLearnerContext, generateOutline, explainNodeNecessity, generateSummary, generateContrastWorkshop, gradeChoice, generateKnowledgeTree, generateProject, buildProjectStepPrompt, generateProjectReport, generateDefenseQuestions, gradeDefense, generateBottleneckReport, generateNodePrimer, generateWarmup, generateSpark, suggestMaterials, curateResources, suggestResourceSearch, resetClient as resetAiClient, type LectureStyle, type TeachingStance, type ChatMessage } from './aiService'
 import { shouldRefreshSpark } from './spark'
+import { ingestText, retrieve, formatRetrievedContext, buildCorpusDigest } from './ragService'
+import { getSources, deleteSource, getChunksBySubject } from './database'
+import { isFetchableUrl, fetchPageText } from './fetchService'
 import { parseFile } from './fileParser'
-import { listTemplates, loadTemplate, createSubjectFromTree } from './templateLoader'
+import { listTemplates, loadTemplate, createSubjectFromTree, replaceSubjectTree } from './templateLoader'
 import { recordReview, getHighRiskNodes } from './spacedRepetition'
 import { getStreak, recordActivity } from './streak'
 import { buildDailyNudge } from './nudge'
@@ -227,6 +230,71 @@ function registerIpcHandlers(): void {
     return primer
   })
 
+  ipcMain.handle('material:suggest', async (_, subjectName: string) => {
+    const lang = getSetting('language')
+    let results: { title: string; url: string }[] = []
+    if (isSearchConfigured()) {
+      try {
+        const query = lang === 'zh' ? `${subjectName} 教程 官方文档 教材` : `${subjectName} tutorial official docs textbook`
+        results = (await performSearch(query)).map(r => ({ title: r.title, url: r.url }))
+      } catch {  }
+    }
+    return suggestMaterials(subjectName, lang, results)
+  })
+
+  ipcMain.handle('rag:ingest', async (_, payload: { subjectId: string; kind: string; title: string; origin: string | null; text: string }) => {
+    return ingestText(payload)
+  })
+
+  ipcMain.handle('rag:list', (_, subjectId: string) => getSources(subjectId))
+
+  ipcMain.handle('rag:delete', (_, sourceId: string) => {
+    deleteSource(sourceId)
+    return { success: true }
+  })
+
+  ipcMain.handle('material:fetch', async (_, payload: { subjectId: string; url: string }) => {
+    if (getPref('auto_fetch_enabled') !== '1') return { enabled: false }
+    if (!isFetchableUrl(payload.url)) {
+      return { enabled: true, error: 'invalid_or_blocked_url' }
+    }
+    try {
+      const page = await fetchPageText(payload.url)
+      if (!page.text || page.text.length < 200) return { enabled: true, error: 'empty_page' }
+      const result = await ingestText({
+        subjectId: payload.subjectId,
+        kind: 'url',
+        title: page.title || payload.url,
+        origin: payload.url,
+        text: page.text
+      })
+      return { enabled: true, ...result, title: page.title || payload.url }
+    } catch (e) {
+      return { enabled: true, error: e instanceof Error ? e.message : String(e) }
+    }
+  })
+
+  ipcMain.handle('rag:auto-fetch-enabled', () => getPref('auto_fetch_enabled') === '1')
+
+  ipcMain.handle('tree:from-materials', async (_, subjectId: string) => {
+    const sources = getSources(subjectId)
+    if (sources.length === 0) return { success: false, error: 'no_materials' }
+    const chunks = getChunksBySubject(subjectId)
+    const bySource = new Map<string, string[]>()
+    for (const c of chunks) {
+      const arr = bySource.get(c.source_id) ?? []
+      arr.push(c.text)
+      bySource.set(c.source_id, arr)
+    }
+    const digest = buildCorpusDigest(sources.map(s => ({ id: s.id, title: s.title })), bySource)
+    const subject = getSubjects().find(s => s.id === subjectId)
+    const lang = getSetting('language')
+    const tree = await generateKnowledgeTree(subject?.name || '', lang, digest)
+    if (!tree.nodes || tree.nodes.length === 0) return { success: false, error: 'generation_failed' }
+    const count = replaceSubjectTree(subjectId, tree.nodes)
+    return { success: true, nodes: count }
+  })
+
   ipcMain.handle('resources:find', async (_, nodeName: string) => {
     const lang = getSetting('language')
     if (!isSearchConfigured()) {
@@ -273,6 +341,18 @@ function registerIpcHandlers(): void {
       streakDays: getStreak().count,
       language: lang
     })
+
+    let retrievedContext = ''
+    if (payload.nodeId) {
+      const node = getNodeById(payload.nodeId)
+      if (node) {
+        const lastUser = payload.messages[payload.messages.length - 1]
+        const query = `${node.name} ${node.description ?? ''} ${lastUser?.content ?? ''}`.trim()
+        const chunks = await retrieve(node.subject_id, query, 4)
+        retrievedContext = formatRetrievedContext(chunks, isZh)
+      }
+    }
+
     const systemPrompt = buildSystemPrompt({
       ...payload.systemContext,
       language: lang,
@@ -280,7 +360,8 @@ function registerIpcHandlers(): void {
       difficulty: difficultyDescriptor(getDifficultyLevel(), isZh),
       searchEnabled,
       mastery: nodeMastery(payload.nodeId),
-      learnerContext
+      learnerContext,
+      retrievedContext
     })
 
     const userMsg = payload.messages[payload.messages.length - 1]
@@ -450,7 +531,9 @@ function registerIpcHandlers(): void {
       .filter(n => n.status === 'mastered' || n.status === 'learning')
       .map(n => n.name)
     if (studied.length === 0) return []
-    return generateWarmup(studied, getSetting('language'))
+    const active = getPref('active_subject')
+    const grounding = active ? await retrieve(active, studied.slice(0, 8).join(' '), 6) : []
+    return generateWarmup(studied, getSetting('language'), grounding)
   })
 
   ipcMain.handle('warmup:complete', () => recordActivity())
@@ -695,12 +778,14 @@ function registerIpcHandlers(): void {
     const subject = getSubjects().find(s => s.id === subjectId)
     const mastered = getNodes(subjectId).filter(n => n.status === 'mastered').map(n => n.name)
     const lang = getSetting('language')
-    return generateDefenseQuestions(subject?.name || '', mastered, lang)
+    const grounding = await retrieve(subjectId, subject?.name || mastered.join(' '), 6)
+    return generateDefenseQuestions(subject?.name || '', mastered, lang, grounding)
   })
 
-  ipcMain.handle('defense:grade', async (_, payload: { question: string; answer: string }) => {
+  ipcMain.handle('defense:grade', async (_, payload: { question: string; answer: string; subjectId?: string }) => {
     const lang = getSetting('language')
-    return gradeDefense(payload.question, payload.answer, lang)
+    const grounding = payload.subjectId ? await retrieve(payload.subjectId, payload.question, 5) : []
+    return gradeDefense(payload.question, payload.answer, lang, grounding)
   })
 
   ipcMain.handle('defense:export', async (_, payload: { content: string }) => {

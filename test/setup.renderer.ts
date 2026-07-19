@@ -4,6 +4,16 @@ import { cleanup } from '@testing-library/react'
 
 afterEach(() => cleanup())
 
+class ResizeObserverStub {
+  observe(): void {}
+  unobserve(): void {}
+  disconnect(): void {}
+}
+
+if (!('ResizeObserver' in globalThis)) {
+  Object.defineProperty(globalThis, 'ResizeObserver', { value: ResizeObserverStub, configurable: true, writable: true })
+}
+
 class MemoryStorage {
   private store = new Map<string, string>()
   get length(): number {

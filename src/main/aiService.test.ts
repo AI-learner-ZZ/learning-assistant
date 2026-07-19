@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from 'vitest'
 vi.mock('electron', () => ({ BrowserWindow: class {} }))
 vi.mock('./settings', () => ({ getApiKey: vi.fn(() => 'k'), getSetting: vi.fn(() => '') }))
 
-import { buildSystemPrompt, buildLearnerContext, extractJson, parseWarmupQuestions, type GeneratedTreeNode } from './aiService'
+import { buildSystemPrompt, buildLearnerContext, extractJson, parseWarmupQuestions, parseMaterials, type GeneratedTreeNode } from './aiService'
 
 describe('buildSystemPrompt', () => {
   it('injects the novice stance and direct-instruction guidance', () => {
@@ -40,6 +40,40 @@ describe('buildSystemPrompt', () => {
   it('embeds the learner context when provided', () => {
     const ctx = buildLearnerContext({ streakDays: 5, language: 'en' })
     expect(buildSystemPrompt({ language: 'en', learnerContext: ctx })).toContain('ABOUT THIS LEARNER')
+  })
+
+  it('embeds retrieved RAG context when provided', () => {
+    const out = buildSystemPrompt({ language: 'en', retrievedContext: '[REFERENCE] excerpt [1] foo' })
+    expect(out).toContain('[REFERENCE]')
+    expect(out).toContain('foo')
+  })
+})
+
+describe('parseMaterials', () => {
+  it('parses a fenced JSON array of materials', () => {
+    const raw = '```json\n[{"title":"AWS Docs","url":"https://aws.amazon.com","why":"authoritative","kind":"doc"}]\n```'
+    const out = parseMaterials(raw)
+    expect(out).toHaveLength(1)
+    expect(out[0]).toMatchObject({ title: 'AWS Docs', url: 'https://aws.amazon.com', kind: 'doc' })
+  })
+
+  it('drops entries missing a title or url', () => {
+    expect(parseMaterials(JSON.stringify([{ title: 'x' }, { url: 'https://y.com' }]))).toEqual([])
+  })
+
+  it('defaults why and kind when absent', () => {
+    const out = parseMaterials(JSON.stringify([{ title: 'T', url: 'https://u.com' }]))
+    expect(out[0]).toMatchObject({ why: '', kind: 'doc' })
+  })
+
+  it('returns empty for non-array or garbage', () => {
+    expect(parseMaterials('{"not":"array"}')).toEqual([])
+    expect(parseMaterials('nonsense')).toEqual([])
+  })
+
+  it('caps at 12 entries', () => {
+    const many = JSON.stringify(Array.from({ length: 20 }, (_, i) => ({ title: `t${i}`, url: `https://u${i}.com` })))
+    expect(parseMaterials(many)).toHaveLength(12)
   })
 })
 

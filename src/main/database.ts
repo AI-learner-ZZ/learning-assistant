@@ -141,6 +141,32 @@ function createTables(): void {
       sort_order INTEGER DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS sources (
+      id TEXT PRIMARY KEY,
+      subject_id TEXT NOT NULL,
+      kind TEXT DEFAULT 'txt',
+      title TEXT NOT NULL,
+      origin TEXT,
+      status TEXT DEFAULT 'pending',
+      chunk_count INTEGER DEFAULT 0,
+      token_estimate INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS doc_chunks (
+      id TEXT PRIMARY KEY,
+      source_id TEXT NOT NULL,
+      subject_id TEXT NOT NULL,
+      seq INTEGER DEFAULT 0,
+      text TEXT NOT NULL,
+      embedding TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS node_sources (
+      node_id TEXT NOT NULL,
+      chunk_id TEXT NOT NULL
+    );
   `)
 }
 
@@ -219,6 +245,10 @@ export function upsertNode(node: Partial<KnowledgeNode> & { id: string; subject_
     [node.id, node.subject_id, node.parent_id ?? null, node.name, node.description ?? null,
      node.status ?? 'unlocked', node.progress ?? 0, node.sort_order ?? 0, node.estimated_minutes ?? 30]
   )
+}
+
+export function deleteSubjectNodes(subjectId: string): void {
+  getDb().run('DELETE FROM knowledge_tree WHERE subject_id = ?', [subjectId])
 }
 
 export function updateNodeStatus(id: string, status: string, progress?: number): void {
@@ -422,6 +452,62 @@ export function getUnresolvedErrorsByType(errorType: string): (ErrorEntry & { no
 
 export function resolveErrorsByType(errorType: string): void {
   getDb().run('UPDATE error_log SET resolved = 1 WHERE error_type = ? AND resolved = 0', [errorType])
+}
+
+export interface SourceRow {
+  id: string
+  subject_id: string
+  kind: string
+  title: string
+  origin: string | null
+  status: string
+  chunk_count: number
+  token_estimate: number
+  created_at: string
+}
+
+export interface ChunkRow {
+  id: string
+  source_id: string
+  subject_id: string
+  seq: number
+  text: string
+  embedding: string | null
+}
+
+export function insertSource(s: Omit<SourceRow, 'created_at'>): void {
+  getDb().run(
+    `INSERT OR REPLACE INTO sources (id, subject_id, kind, title, origin, status, chunk_count, token_estimate)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [s.id, s.subject_id, s.kind, s.title, s.origin, s.status, s.chunk_count, s.token_estimate]
+  )
+}
+
+export function getSources(subjectId: string): SourceRow[] {
+  return getDb().all('SELECT * FROM sources WHERE subject_id = ? ORDER BY created_at DESC', [subjectId]) as SourceRow[]
+}
+
+export function deleteSource(id: string): void {
+  getDb().run('DELETE FROM doc_chunks WHERE source_id = ?', [id])
+  getDb().run('DELETE FROM sources WHERE id = ?', [id])
+}
+
+export function insertChunks(chunks: ChunkRow[]): void {
+  for (const c of chunks) {
+    getDb().run(
+      'INSERT OR REPLACE INTO doc_chunks (id, source_id, subject_id, seq, text, embedding) VALUES (?, ?, ?, ?, ?, ?)',
+      [c.id, c.source_id, c.subject_id, c.seq, c.text, c.embedding]
+    )
+  }
+}
+
+export function getChunksBySubject(subjectId: string): ChunkRow[] {
+  return getDb().all('SELECT * FROM doc_chunks WHERE subject_id = ?', [subjectId]) as ChunkRow[]
+}
+
+export function countSources(subjectId: string): number {
+  const row = getDb().get('SELECT COUNT(*) as c FROM sources WHERE subject_id = ?', [subjectId]) as { c: number } | undefined
+  return row?.c ?? 0
 }
 
 export function getPref(key: string): string | null {
