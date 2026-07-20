@@ -117,12 +117,12 @@ const api = {
     onStream: (channelId: string, cb: (data: { delta: string; done: boolean; full?: string; error?: boolean }) => void) => {
       const handler = (_: Electron.IpcRendererEvent, data: { delta: string; done: boolean; full?: string; error?: boolean }) => cb(data)
       ipcRenderer.on(`chat-stream-${channelId}`, handler)
-      return () => ipcRenderer.removeListener(`chat-stream-${channelId}`, handler)
+      return (): void => { ipcRenderer.removeListener(`chat-stream-${channelId}`, handler) }
     },
     onSearch: (channelId: string, cb: (data: { query: string; sources: unknown[] }) => void) => {
       const handler = (_: Electron.IpcRendererEvent, data: { query: string; sources: unknown[] }) => cb(data)
       ipcRenderer.on(`chat-search-${channelId}`, handler)
-      return () => ipcRenderer.removeListener(`chat-search-${channelId}`, handler)
+      return (): void => { ipcRenderer.removeListener(`chat-search-${channelId}`, handler) }
     }
   },
 
@@ -179,7 +179,7 @@ const api = {
     onAvailable: (cb: (data: { errorType: string; count: number; nodeNames: string[] }) => void) => {
       const handler = (_: Electron.IpcRendererEvent, data: { errorType: string; count: number; nodeNames: string[] }) => cb(data)
       ipcRenderer.on('contrast-available', handler)
-      return () => ipcRenderer.removeListener('contrast-available', handler)
+      return (): void => { ipcRenderer.removeListener('contrast-available', handler) }
     }
   },
 
@@ -229,7 +229,17 @@ const api = {
 
   app: {
     getVersion: () => ipcRenderer.invoke('app:get-version')
-  }
+  },
+
+  lan: {
+    info: () => ipcRenderer.invoke('lan:info'),
+    setup: (username: string, password: string) => ipcRenderer.invoke('lan:setup', username, password),
+    enable: (enabled: boolean) => ipcRenderer.invoke('lan:enable', enabled),
+    sessions: () => ipcRenderer.invoke('lan:sessions'),
+    revoke: (id: string) => ipcRenderer.invoke('lan:revoke', id)
+  },
+
+  isWeb: false as boolean
 }
 
 contextBridge.exposeInMainWorld('api', api)

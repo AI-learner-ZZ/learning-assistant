@@ -1,5 +1,4 @@
 import OpenAI from 'openai'
-import { BrowserWindow } from 'electron'
 import { getApiKey, getSetting } from './settings'
 import { parseSpark } from './spark'
 
@@ -245,7 +244,7 @@ export interface ChatMessage {
 
 export async function streamChat(
   messages: ChatMessage[],
-  win: BrowserWindow,
+  emit: (channel: string, data: unknown) => void,
   channelId: string,
   systemPrompt?: string
 ): Promise<string> {
@@ -270,15 +269,11 @@ export async function streamChat(
     const delta = chunk.choices[0]?.delta?.content || ''
     if (delta) {
       fullText += delta
-      if (!win.isDestroyed()) {
-        win.webContents.send(`chat-stream-${channelId}`, { delta, done: false })
-      }
+      emit(`chat-stream-${channelId}`, { delta, done: false })
     }
   }
 
-  if (!win.isDestroyed()) {
-    win.webContents.send(`chat-stream-${channelId}`, { delta: '', done: true, full: fullText })
-  }
+  emit(`chat-stream-${channelId}`, { delta: '', done: true, full: fullText })
 
   return fullText
 }

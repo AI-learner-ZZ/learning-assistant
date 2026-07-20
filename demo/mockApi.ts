@@ -410,5 +410,13 @@ export const mockApi = {
   },
   app: {
     getVersion: () => Promise.resolve('demo')
-  }
+  },
+  lan: {
+    info: () => Promise.resolve({ hasCredentials: false, enabled: false, running: false, port: 8735, ips: [] }),
+    setup: () => Promise.resolve(true),
+    enable: () => Promise.resolve({ running: false, error: 'demo' }),
+    sessions: () => Promise.resolve([]),
+    revoke: () => Promise.resolve({ revoked: false })
+  },
+  isWeb: false
 }

@@ -8,7 +8,23 @@ import { useSettingsStore } from '@/stores/useSettingsStore'
 import { useTutorialStore } from '@/stores/useTutorialStore'
 import { SearchSettings } from './SearchSettings'
 import { TutorialDialog } from './TutorialDialog'
-import { Database, Download, Trash2, Key, FolderOpen, Palette, Globe, Loader2, CheckCircle, GraduationCap, RotateCcw, DownloadCloud } from 'lucide-react'
+import { Database, Download, Trash2, Key, FolderOpen, Palette, Globe, Loader2, CheckCircle, GraduationCap, RotateCcw, DownloadCloud, Wifi, X } from 'lucide-react'
+import QRCode from 'qrcode'
+
+interface LanInfo {
+  hasCredentials: boolean
+  enabled: boolean
+  running: boolean
+  port: number
+  ips: string[]
+}
+
+interface LanSession {
+  id: string
+  label: string
+  createdAt: number
+  expiresAt: number
+}
 
 export function SettingsPage(): JSX.Element {
   const { settings, loadSettings, updateSetting } = useSettingsStore()
@@ -20,10 +36,77 @@ export function SettingsPage(): JSX.Element {
   const [exporting, setExporting] = useState(false)
   const [guideOpen, setGuideOpen] = useState(false)
   const [autoFetch, setAutoFetch] = useState(false)
+  const [lanInfo, setLanInfo] = useState<LanInfo | null>(null)
+  const [lanUser, setLanUser] = useState('')
+  const [lanPass, setLanPass] = useState('')
+  const [lanBusy, setLanBusy] = useState(false)
+  const [lanError, setLanError] = useState('')
+  const [lanQr, setLanQr] = useState('')
+  const [lanSessions, setLanSessions] = useState<LanSession[]>([])
+
+  const loadLan = async (): Promise<void> => {
+    const info = await window.api.lan.info() as LanInfo
+    setLanInfo(info)
+    if (info.running) {
+      const sessions = await window.api.lan.sessions() as LanSession[]
+      setLanSessions(sessions)
+    } else {
+      setLanSessions([])
+    }
+  }
 
   useEffect(() => {
     window.api.pref.get('auto_fetch_enabled').then(v => setAutoFetch(v === '1'))
+    if (!window.api.isWeb) loadLan()
   }, [])
+
+  useEffect(() => {
+    if (lanInfo?.running && lanInfo.ips.length > 0) {
+      QRCode.toDataURL(`http://${lanInfo.ips[0]}:${lanInfo.port}`, { margin: 1, width: 160 })
+        .then(setLanQr)
+        .catch(() => setLanQr(''))
+    } else {
+      setLanQr('')
+    }
+  }, [lanInfo])
+
+  const saveLanCredentials = async (): Promise<void> => {
+    setLanBusy(true)
+    setLanError('')
+    try {
+      const ok = await window.api.lan.setup(lanUser, lanPass) as boolean
+      if (!ok) {
+        setLanError(t('用户名不能为空，密码至少 4 位', 'Username required; password needs at least 4 characters'))
+        return
+      }
+      setLanPass('')
+      await loadLan()
+    } finally {
+      setLanBusy(false)
+    }
+  }
+
+  const toggleLan = async (): Promise<void> => {
+    if (!lanInfo) return
+    setLanBusy(true)
+    setLanError('')
+    try {
+      const res = await window.api.lan.enable(!lanInfo.enabled) as { running: boolean; error?: string }
+      if (res.error === 'no_credentials') {
+        setLanError(t('请先设置用户名和密码', 'Set a username and password first'))
+      } else if (res.error) {
+        setLanError(res.error)
+      }
+      await loadLan()
+    } finally {
+      setLanBusy(false)
+    }
+  }
+
+  const revokeSession = async (id: string): Promise<void> => {
+    await window.api.lan.revoke(id)
+    await loadLan()
+  }
 
   const toggleAutoFetch = async (): Promise<void> => {
     const next = !autoFetch
@@ -242,6 +325,91 @@ export function SettingsPage(): JSX.Element {
           </div>
         </div>
       </section>
+
+      {!window.api.isWeb && (
+        <>
+          <Separator className="my-6" />
+
+          <section className="space-y-4">
+            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              <Wifi className="h-4 w-4" />
+              {t('局域网访问（手机）', 'LAN Access (phone)')}
+            </div>
+            <div className="space-y-3 pl-6">
+              <p className="text-xs text-muted-foreground">
+                {t('开启后，同一 WiFi 下的手机浏览器可登录使用。仅在你信任的家庭网络中使用；数据以明文 HTTP 传输。', 'When on, a phone browser on the same WiFi can sign in and use the app. Use only on a home network you trust; traffic is plain HTTP.')}
+              </p>
+
+              <div className="space-y-1.5">
+                <Label className="text-sm">{t('登录凭据', 'Sign-in credentials')}</Label>
+                <div className="flex gap-2">
+                  <Input
+                    className="flex-1"
+                    placeholder={lanInfo?.hasCredentials ? t('已设置 — 输入可更换用户名', 'Set — type to replace username') : t('用户名', 'Username')}
+                    value={lanUser}
+                    onChange={e => setLanUser(e.target.value)}
+                  />
+                  <Input
+                    className="flex-1"
+                    type="password"
+                    placeholder={t('密码（至少 4 位）', 'Password (min 4 chars)')}
+                    value={lanPass}
+                    onChange={e => setLanPass(e.target.value)}
+                  />
+                  <Button variant="outline" disabled={lanBusy || !lanUser.trim() || !lanPass} onClick={saveLanCredentials}>
+                    {t('保存', 'Save')}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <Label className="text-sm">{t('开启局域网访问', 'Enable LAN access')}</Label>
+                <Button
+                  variant={lanInfo?.enabled ? 'default' : 'outline'}
+                  size="sm"
+                  className="w-16"
+                  disabled={lanBusy || !lanInfo}
+                  onClick={toggleLan}
+                >
+                  {lanInfo?.enabled ? t('已开启', 'On') : t('已关闭', 'Off')}
+                </Button>
+              </div>
+
+              {lanError && <p className="text-xs text-destructive">{lanError}</p>}
+
+              {lanInfo?.running && (
+                <div className="rounded-lg border p-3 space-y-2">
+                  <p className="text-xs font-medium">{t('手机访问地址（扫码或输入）', 'Open on your phone (scan or type)')}</p>
+                  {lanInfo.ips.map(ip => (
+                    <p key={ip} className="text-sm font-mono">{`http://${ip}:${lanInfo.port}`}</p>
+                  ))}
+                  {lanQr && <img src={lanQr} alt="QR" className="rounded-md border" width={160} height={160} />}
+                  <p className="text-xs text-muted-foreground">
+                    {t('首次开启时 Windows 防火墙可能询问，请在"专用网络"上允许。', 'Windows Firewall may ask on first start — allow it on Private networks.')}
+                  </p>
+                </div>
+              )}
+
+              {lanInfo?.running && lanSessions.length > 0 && (
+                <div className="space-y-1.5">
+                  <Label className="text-sm">{t('已登录的设备', 'Signed-in devices')}</Label>
+                  {lanSessions.map(s => (
+                    <div key={s.id} className="flex items-center justify-between gap-2 rounded-md border px-2.5 py-1.5">
+                      <div className="min-w-0">
+                        <p className="text-xs truncate">{s.label}</p>
+                        <p className="text-xs text-muted-foreground">{new Date(s.createdAt).toLocaleString()}</p>
+                      </div>
+                      <Button size="sm" variant="ghost" className="shrink-0 text-muted-foreground hover:text-destructive" onClick={() => revokeSession(s.id)}>
+                        <X className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+        </>
+      )}
 
       <TutorialDialog open={guideOpen} onClose={() => setGuideOpen(false)} />
     </div>

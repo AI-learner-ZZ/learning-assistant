@@ -10,6 +10,7 @@ electron_err.txt
 *.local
 dev-docs/
 demo-dist/
+web-dist/
 Capture.PNG
 demo-shot.png
 ./claude
